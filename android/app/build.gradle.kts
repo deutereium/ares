@@ -175,7 +175,7 @@ dependencies {
        val replacement = file(replacementEmbeddedPushAar)
        require(replacement.isFile && replacement.extension == "aar") { "embeddedPushAar must name an existing .aar" }
        implementation(files(replacement))
-       implementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.0")
+       implementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.21")
        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2")
    }
    implementation("org.unifiedpush.android:connector:3.3.5") {
