@@ -53,12 +53,12 @@ jobs:
           } > "$GITHUB_WORKSPACE/key.properties"
 
       - name: Build release APK
-        run: flutter build apk --release --target-platform android-arm64
+        run: flutter build apk --release --split-per-abi
 
       - name: Verify APK
         run: |
           set -euo pipefail
-          apk=build/app/outputs/flutter-apk/app-release.apk
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
           aapt=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
           "$apksigner" verify --print-certs "$apk"
@@ -70,5 +70,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ares-release-arm64
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 14
