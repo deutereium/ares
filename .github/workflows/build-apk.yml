@@ -6,15 +6,19 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/build-apk.yml'
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Debug APK (split per ABI)
+    name: Release APK (arm64)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -32,12 +36,39 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --debug --split-per-abi
+      - name: Configure signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
+          {
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=$GITHUB_WORKSPACE/release.keystore"
+          } > "$GITHUB_WORKSPACE/key.properties"
 
-      - name: Upload APKs
+      - name: Build release APK
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Verify APK
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
+          "$apksigner" verify --print-certs "$apk"
+          "$aapt" dump badging "$apk" | head -3
+          sha256sum "$apk"
+          ls -lh "$apk"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: ares-debug-apks
-          path: build/app/outputs/flutter-apk/app-*-debug.apk
+          name: ares-release-arm64
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
