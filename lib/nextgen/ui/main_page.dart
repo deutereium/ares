@@ -10,9 +10,11 @@ import '../../core/models/session.dart';
 import '../../core/services/notification_prefs.dart';
 import '../../core/services/connection_mutation_barrier.dart';
 import '../../core/services/turn_notification_service.dart';
+import '../../core/utils/adaptive_layout.dart';
 import '../data/nextgen_gateway.dart';
 import '../data/chat_controller.dart';
 import '../nextgen_preferences.dart';
+import '../theme/nextgen_theme.dart';
 import 'capabilities_page.dart';
 import 'chat_view.dart';
 import 'insights_page.dart';
@@ -42,6 +44,15 @@ class _NgMainContent extends StatefulWidget {
 class _NgMainPageState extends State<_NgMainContent>
     with WidgetsBindingObserver {
   final _scaffold = GlobalKey<ScaffoldState>();
+
+  /// Keeps the sidebar's search/filter/scroll state alive when it moves
+  /// between the modal drawer (compact) and the docked pane (wide) as the
+  /// window crosses the expanded breakpoint.
+  final _sidebarKey = GlobalKey();
+
+  /// Whether the user collapsed the docked sidebar on a wide window. Reset
+  /// implicitly when the window leaves the expanded class.
+  bool _dockedSidebarCollapsed = false;
   NgSessionsModel? _sessions;
   NgChatController? _chat;
   bool _foreground = true;
@@ -564,6 +575,42 @@ class _NgMainPageState extends State<_NgMainContent>
   @override
   Widget build(BuildContext context) {
     final chat = _chat;
+    final c = NgColors.of(context);
+    final expanded = isExpandedWindow(context);
+    // Wide windows dock the sessions sidebar beside the chat; compact and
+    // medium windows keep the modal drawer. The same sidebar State (search,
+    // filter, scroll) is reused across the breakpoint via [_sidebarKey].
+    final docked = expanded && !_dockedSidebarCollapsed;
+    _sessions?.drawerOpen = docked;
+
+    final sidebar = NgSessionsSidebar(
+      key: _sidebarKey,
+      model: _sessions!,
+      currentSessionId: chat?.storedId,
+      onOpen: _open,
+      onNewChat: _newChat,
+      onDestination: _go,
+      docked: docked,
+    );
+
+    void toggleSidebar() {
+      if (expanded) {
+        setState(() => _dockedSidebarCollapsed = !_dockedSidebarCollapsed);
+      } else {
+        _scaffold.currentState?.openDrawer();
+      }
+    }
+
+    final chatView = chat == null
+        ? const SizedBox.shrink()
+        : NgChatView(
+            key: ObjectKey(chat),
+            chat: chat,
+            onOpenSidebar: toggleSidebar,
+            sessions: _sessions,
+            onNewChat: _newChat,
+          );
+
     // Back opens the sidebar; back again with the sidebar open closes it.
     // Pushed pages (settings, scheduled...) still pop normally first.
     return PopScope(
@@ -573,25 +620,19 @@ class _NgMainPageState extends State<_NgMainContent>
         key: _scaffold,
         drawerEdgeDragWidth: 48,
         onDrawerChanged: (open) {
-          _sessions?.drawerOpen = open;
+          _sessions?.drawerOpen = open || docked;
           if (open) unawaited(_sessions?.refresh());
         },
-        drawer: NgSessionsSidebar(
-          model: _sessions!,
-          currentSessionId: chat?.storedId,
-          onOpen: _open,
-          onNewChat: _newChat,
-          onDestination: _go,
-        ),
-        body: chat == null
-            ? const SizedBox.shrink()
-            : NgChatView(
-                key: ObjectKey(chat),
-                chat: chat,
-                onOpenSidebar: () => _scaffold.currentState?.openDrawer(),
-                sessions: _sessions,
-                onNewChat: _newChat,
-              ),
+        drawer: docked ? null : sidebar,
+        body: docked
+            ? Row(
+                children: [
+                  sidebar,
+                  VerticalDivider(width: 1, thickness: 1, color: c.stroke),
+                  Expanded(child: chatView),
+                ],
+              )
+            : chatView,
       ),
     );
   }

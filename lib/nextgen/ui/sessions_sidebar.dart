@@ -419,6 +419,7 @@ class NgSessionsSidebar extends StatefulWidget {
     required this.onOpen,
     required this.onNewChat,
     required this.onDestination,
+    this.docked = false,
   });
 
   final NgSessionsModel model;
@@ -426,6 +427,10 @@ class NgSessionsSidebar extends StatefulWidget {
   final ValueChanged<Session> onOpen;
   final VoidCallback onNewChat;
   final ValueChanged<NgDestination> onDestination;
+
+  /// When true the sidebar renders as a persistent docked pane (wide windows)
+  /// beside the chat instead of a modal [Drawer]. Same content and width.
+  final bool docked;
 
   @override
   State<NgSessionsSidebar> createState() => _NgSessionsSidebarState();
@@ -637,7 +642,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
     final scope = NgScope.of(context);
-    return Drawer(
+    final drawer = Drawer(
       backgroundColor: c.sidebar,
       width: 330,
       shape: const RoundedRectangleBorder(),
@@ -812,6 +817,11 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
           },
         ),
       ),
+    );
+    if (!widget.docked) return drawer;
+    return Material(
+      color: c.sidebar,
+      child: SizedBox(width: 330, child: drawer.child),
     );
   }
 
