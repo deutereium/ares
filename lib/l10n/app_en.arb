@@ -2095,6 +2095,7 @@
     }
   },
   "ng_delete": "Delete",
+  "ng_description": "Description",
   "ng_delete_this_job": "Delete this job?",
   "ng_it_stops_running_past_runs_stay": "It stops running. Past runs stay in your chats.",
   "ng_next_run": "Next run {when}",

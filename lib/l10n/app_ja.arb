@@ -1449,6 +1449,7 @@
   "ng_last_2": "前回 {when} · {result}",
   "ng_job": "ジョブ {id}",
   "ng_delete": "削除",
+  "ng_description": "説明",
   "ng_delete_this_job": "このジョブを削除しますか？",
   "ng_it_stops_running_past_runs_stay": "ジョブは停止します。過去の実行履歴はチャットに残ります。",
   "ng_next_run": "次回の実行 {when}",

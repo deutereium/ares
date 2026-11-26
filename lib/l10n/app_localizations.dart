@@ -8836,6 +8836,12 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get ng_delete;
 
+  /// No description provided for @ng_description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get ng_description;
+
   /// No description provided for @ng_delete_this_job.
   ///
   /// In en, this message translates to:

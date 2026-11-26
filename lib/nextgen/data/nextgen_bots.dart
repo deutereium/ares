@@ -4,7 +4,10 @@
 // socket so a live profile switch rebuilds this model with the shell.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../ui/nextgen_scope.dart';
 
@@ -20,6 +23,8 @@ class NgBot {
     this.sessionId,
     this.sessionTitle,
     this.model,
+    this.meta = const <String, dynamic>{},
+    this.revision,
   });
 
   final String name;
@@ -32,6 +37,13 @@ class NgBot {
   final String? sessionId;
   final String? sessionTitle;
   final String? model;
+
+  /// The profile's `ui_meta['hermes-bots']` map, carried so an edit writes back
+  /// the fields this client doesn't own (section, colour, pin).
+  final Map<String, dynamic> meta;
+
+  /// Compare-and-swap revision for that key; null on gateways that don't send it.
+  final int? revision;
 }
 
 class NgGroupMessage {
@@ -274,6 +286,8 @@ class NgBotsModel extends ChangeNotifier {
         : name;
     final preview = previewSource['preview']?.toString() ??
         (lastMs > 0 ? last['title']?.toString() ?? '' : '');
+    final revisions = _map(row['ui_meta_revisions']);
+    final revision = revisions['hermes-bots'];
     return NgBot(
       name: name,
       title: title.isEmpty ? name : title,
@@ -286,7 +300,221 @@ class NgBotsModel extends ChangeNotifier {
           canonical['resolved_id']?.toString() ?? canonical['id']?.toString(),
       sessionTitle: canonical['title']?.toString(),
       model: row['model']?.toString(),
+      meta: botsMeta,
+      revision: revision is num ? revision.toInt() : null,
     );
+  }
+
+  /// Reads one profile row fresh from the gateway, bypassing the shared
+  /// [refresh] guard: a compare-and-swap retry must not reuse a cached row.
+  Future<Map<String, dynamic>?> _readRow(String name) async {
+    final result = await scope.gateway.call('profiles.list', {
+      'include_sessions': false,
+    });
+    for (final row in (result['profiles'] as List? ?? const [])
+        .whereType<Map>()) {
+      final map = _map(row);
+      if (map['name']?.toString() == name) return map;
+    }
+    return null;
+  }
+
+  static String? _imageMime(Uint8List bytes) {
+    if (bytes.length > 3 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4e &&
+        bytes[3] == 0x47) {
+      return 'image/png';
+    }
+    if (bytes.length > 2 && bytes[0] == 0xff && bytes[1] == 0xd8) {
+      return 'image/jpeg';
+    }
+    if (bytes.length > 11 &&
+        bytes[0] == 0x52 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46 &&
+        bytes[3] == 0x46 &&
+        bytes[8] == 0x57 &&
+        bytes[9] == 0x45 &&
+        bytes[10] == 0x42 &&
+        bytes[11] == 0x50) {
+      return 'image/webp';
+    }
+    return null;
+  }
+
+  /// Saves a bot's title, description and avatar the way Desktop's Edit Profile
+  /// does: presentation in `ui_meta['hermes-bots']` (compare-and-swap), the
+  /// role text as `description`, and the image in the profile asset store.
+  ///
+  /// Returns false when the user picked an image the gateway cannot store
+  /// (PNG/JPEG/WebP under 2 MB).
+  Future<bool> saveBot({
+    required String name,
+    required String title,
+    required String description,
+    Uint8List? avatarBytes,
+    bool removeAvatar = false,
+  }) async {
+    String? mime;
+    if (avatarBytes != null && !removeAvatar) {
+      mime = _imageMime(avatarBytes);
+      if (mime == null || avatarBytes.length > 2000000) return false;
+    }
+
+    if (removeAvatar) {
+      await scope.gateway.call('profiles.set_asset', {
+        'name': name,
+        'asset': 'avatar',
+        'clear': true,
+      });
+      _avatars.remove(name);
+    } else if (avatarBytes != null) {
+      await scope.gateway.call('profiles.set_asset', {
+        'name': name,
+        'asset': 'avatar',
+        'data': 'data:$mime;base64,${base64Encode(avatarBytes)}',
+      });
+      _avatars[name] = avatarBytes;
+    }
+
+    var row = await _readRow(name);
+    if (row == null) {
+      throw StateError('The gateway no longer lists $name.');
+    }
+    final cleanDescription = description.trim();
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final current = _map(_map(row['ui_meta'])['hermes-bots']);
+      final next = <String, dynamic>{...current};
+      final cleanTitle = title.trim();
+      if (cleanTitle.isEmpty) {
+        next.remove('title');
+      } else {
+        next['title'] = cleanTitle;
+      }
+      if (removeAvatar) {
+        next.remove('custom');
+      } else if (avatarBytes != null) {
+        next['custom'] = true;
+      }
+      final revisions = _map(row['ui_meta_revisions']);
+      final revision = revisions['hermes-bots'];
+      final params = <String, dynamic>{
+        'name': name,
+        'ui_meta': {'hermes-bots': next},
+        // Description is not part of the CAS: send it once.
+        if (attempt == 0) 'description': cleanDescription,
+        if (revision is num)
+          'ui_meta_expected_revisions': {'hermes-bots': revision.toInt()},
+      };
+      final result = await scope.gateway.call('profiles.configure', params);
+      final applied = _map(result['applied']);
+      final conflicts = applied['ui_meta_conflicts'];
+      if (conflicts is! Map || conflicts.isEmpty) {
+        if (applied['ui_meta'] == false) {
+          throw StateError('The gateway did not save the bot profile.');
+        }
+        await refresh();
+        return true;
+      }
+      row = await _readRow(name);
+      if (row == null) {
+        throw StateError('The gateway no longer lists $name.');
+      }
+    }
+    throw StateError('$name changed on another device; try again.');
+  }
+
+  /// Renames a room. Hosted rooms go through `groups.rename`; Desktop-mirrored
+  /// rooms are renamed in the default profile's `hermes-bots-groups` mirror.
+  Future<void> renameGroup(NgGroupChat group, String name) async {
+    final clean = name.trim();
+    if (clean.isEmpty || clean == group.name) return;
+    final roomId = group.roomId;
+    if (group.gatewayRoom && roomId != null && roomId.isNotEmpty) {
+      await scope.gateway.call('groups.rename', {
+        'room_id': roomId,
+        'event_id': const Uuid().v4(),
+        'name': clean,
+      });
+    } else {
+      await _writeGroupMirror(group, name: clean);
+    }
+    await refresh();
+  }
+
+  /// Deletes a room. Hosted rooms are disbanded; a mirrored room becomes a
+  /// tombstone in the mirror so every client drops it.
+  Future<void> deleteGroup(NgGroupChat group) async {
+    final roomId = group.roomId;
+    if (group.gatewayRoom && roomId != null && roomId.isNotEmpty) {
+      await scope.gateway.call('groups.disband', {'room_id': roomId});
+    } else {
+      await _writeGroupMirror(group, deleted: true);
+    }
+    await refresh();
+  }
+
+  /// Rewrites one entry of the default profile's Desktop group mirror.
+  /// Returns false when older gateways refuse the write.
+  Future<bool> _writeGroupMirror(
+    NgGroupChat group, {
+    String? name,
+    bool deleted = false,
+  }) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final listing = await scope.gateway.call('profiles.list', {
+        'include_sessions': false,
+      });
+      final rows = (listing['profiles'] as List? ?? const [])
+          .whereType<Map>()
+          .map(_map)
+          .toList(growable: false);
+      if (rows.isEmpty) return false;
+      var owner = rows.first;
+      for (final row in rows) {
+        if (row['is_default'] == true) {
+          owner = row;
+          break;
+        }
+      }
+      final ownerName = owner['name']?.toString() ?? '';
+      if (ownerName.isEmpty) return false;
+      final mirror = _map(_map(owner['ui_meta'])['hermes-bots-groups']);
+      final rooms = _map(mirror['rooms']);
+      final key = group.id;
+      final room = _map(rooms[key]);
+      if (deleted) {
+        final tombstones = _map(mirror['deleted']);
+        tombstones[key] = true;
+        mirror['deleted'] = tombstones;
+        rooms.remove(key);
+      } else if (name != null) {
+        rooms[key] = <String, dynamic>{...room, 'name': name};
+      } else {
+        return false;
+      }
+      mirror['version'] = mirror['version'] ?? 3;
+      mirror['updatedAt'] = DateTime.now().millisecondsSinceEpoch;
+      mirror['rooms'] = rooms;
+      final revisions = _map(owner['ui_meta_revisions']);
+      final revision = revisions['hermes-bots-groups'];
+      final result = await scope.gateway.call('profiles.configure', {
+        'name': ownerName,
+        'ui_meta': {'hermes-bots-groups': mirror},
+        if (revision is num)
+          'ui_meta_expected_revisions': {
+            'hermes-bots-groups': revision.toInt(),
+          },
+      });
+      final applied = _map(result['applied']);
+      final conflicts = applied['ui_meta_conflicts'];
+      if (conflicts is! Map || conflicts.isEmpty) {
+        return applied['ui_meta'] != false;
+      }
+    }
+    throw StateError('The group list changed on another device; try again.');
   }
 
   List<NgGroupChat> _groupsFromProfiles(List<Map<String, dynamic>> rows) {

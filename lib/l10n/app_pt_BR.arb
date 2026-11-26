@@ -1449,6 +1449,7 @@
   "ng_last_2": "Último {when} · {result}",
   "ng_job": "Agendamento {id}",
   "ng_delete": "Excluir",
+  "ng_description": "Descrição",
   "ng_delete_this_job": "Excluir este agendamento?",
   "ng_it_stops_running_past_runs_stay": "Ele deixará de ser executado. As execuções anteriores continuarão nas suas conversas.",
   "ng_next_run": "Próxima execução {when}",

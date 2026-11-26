@@ -5293,6 +5293,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ng_delete => 'Supprimer';
 
   @override
+  String get ng_description => 'Description';
+
+  @override
   String get ng_delete_this_job => 'Supprimer cette tâche ?';
 
   @override

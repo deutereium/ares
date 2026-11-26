@@ -1602,6 +1602,7 @@
   "ng_last_2": "Останнє: {when} · {result}",
   "ng_job": "Завдання {id}",
   "ng_delete": "Видалити",
+  "ng_description": "Опис",
   "ng_delete_this_job": "Видалити це завдання?",
   "ng_it_stops_running_past_runs_stay": "Воно більше не запускатиметься. Попередні запуски залишаться у ваших чатах.",
   "ng_next_run": "Наступний запуск: {when}",
