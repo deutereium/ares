@@ -625,6 +625,7 @@ class _NgMainPageState extends State<_NgMainContent>
     final controller = NgGroupChatController(
       gateway: NgScope.of(context).gateway,
       group: group,
+      memberSessions: group.sessionIds,
     );
     unawaited(controller.load());
     if (controller.isHosted) controller.startPolling();

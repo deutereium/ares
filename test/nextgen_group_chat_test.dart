@@ -156,6 +156,7 @@ void main() {
     expect(send['room_id'], 'room-1');
     expect(send['event_id'], isNotEmpty);
     expect(send['payload']?['text'], 'hello');
+    expect(send['payload']?['thread_id'], 'legacy');
     expect(controller.messages.last.text, 'hello');
   });
 
@@ -196,6 +197,59 @@ void main() {
       controller.messages.map((m) => m.text),
       contains('on it'),
     );
+  });
+
+  test('a mirrored room resumes its Desktop-style thread session', () async {
+    final gateway = _Gateway();
+    final api = _Api(gateway.dashboard);
+    gateway.api = api;
+    gateway.handlers['session.resume'] = (params) async {
+      if (params['session_id'] == 'Group: IP group · legacy') {
+        return {'session_id': 'rt-title', 'session_key': 'stored-title'};
+      }
+      throw StateError('session not found');
+    };
+    gateway.handlers['prompt.submit'] = (_) async => {'status': 'started'};
+    final controller = NgGroupChatController(
+      gateway: gateway,
+      group: _mirrored(),
+    )
+      ..pollInterval = Duration.zero
+      ..maxPolls = 1;
+    addTearDown(controller.dispose);
+
+    await controller.send('hello');
+
+    final resumes = gateway.callsTo('session.resume');
+    expect(resumes.first.params['session_id'], 'Group: IP group · legacy');
+    expect(gateway.callsTo('session.create'), isEmpty);
+  });
+
+  test('a new member session uses a thread-scoped hidden title', () async {
+    final gateway = _Gateway();
+    gateway.handlers['session.resume'] = (_) async => throw StateError(
+      'session not found',
+    );
+    gateway.handlers['session.create'] = (_) async => {
+      'stored_session_id': 'stored-new',
+      'session_id': 'rt-new',
+    };
+    gateway.handlers['prompt.submit'] = (_) async => {'status': 'started'};
+    final controller = NgGroupChatController(
+      gateway: gateway,
+      group: _mirrored(),
+    )
+      ..pollInterval = Duration.zero
+      ..maxPolls = 1;
+    addTearDown(controller.dispose);
+
+    await controller.send('hello');
+
+    final create = gateway.callsTo('session.create').single.params;
+    expect(create['title'], 'Group: IP group · legacy');
+    expect(create['hidden'], isTrue);
+    expect(create['room_plumbing'], isTrue);
+    expect(create['follow_profile_config'], isTrue);
   });
 
   test('a transient resume failure does not mint a new session', () async {

@@ -12,6 +12,8 @@ import 'nextgen_bots.dart';
 import 'nextgen_gateway.dart';
 
 class NgGroupChatController extends ChangeNotifier {
+  static const _thread = 'legacy';
+
   NgGroupChatController({
     required this.gateway,
     required this.group,
@@ -208,8 +210,15 @@ class NgGroupChatController extends ChangeNotifier {
       final result = await gateway.call('groups.send', {
         'room_id': roomId,
         'event_id': eventId,
-        'payload': {'text': text},
+        'payload': {'thread_id': _thread, 'text': text},
       });
+      if (result['accepted'] == false) {
+        throw StateError('The gateway did not accept the room message.');
+      }
+      final echoed = result['client_event_id']?.toString();
+      if (echoed != null && echoed.isNotEmpty && echoed != eventId) {
+        throw StateError('The gateway acknowledged a different room message.');
+      }
       _seenEvents.add(eventId);
       final event = _map(result['event']);
       final ackId = event['event_id']?.toString() ?? '';
@@ -295,22 +304,32 @@ class NgGroupChatController extends ChangeNotifier {
     String member,
     String profile,
   ) async {
+    final roomKey = group.roomId ?? group.id;
+    final roomTitle = 'Group: $roomKey';
+    final title = '$roomTitle · $_thread';
     final known = memberSessions[profile] ?? _storedByProfile[profile];
-    if (known != null && known.isNotEmpty) {
+    final targets = <String>[
+      if (known != null && known.isNotEmpty) known,
+      title,
+      roomTitle,
+    ];
+    for (final target in targets) {
       try {
         final result = await gateway.call('session.resume', {
-          'session_id': known,
+          'session_id': target,
           'profile': profile,
           'omit_messages': true,
         });
         final runtime = result['session_id']?.toString() ?? '';
-        if (runtime.isNotEmpty) {
-          final stored = result['session_key']?.toString() ?? known;
-          _storedByProfile[profile] = stored;
-          _runtimeByProfile[profile] = runtime;
-          return (stored, runtime);
-        }
+        if (runtime.isEmpty) continue;
+        final stored = result['session_key']?.toString() ?? target;
+        _storedByProfile[profile] = stored;
+        _runtimeByProfile[profile] = runtime;
+        return (stored, runtime);
       } catch (e) {
+        // Fail closed on a transient failure: a network blip is not proof
+        // that the member's hidden session is gone. Only a definitive
+        // session-not-found lets the next target (or creation) be tried.
         if (!_isSessionAbsent(e)) rethrow;
       }
     }
@@ -319,7 +338,7 @@ class NgGroupChatController extends ChangeNotifier {
       {
         'source': gateway.sessionAuthority ? 'gui' : 'desktop',
         'profile': profile,
-        'title': 'Group: ${group.id}',
+        'title': title,
         'hidden': true,
         'room_plumbing': true,
         'follow_profile_config': true,
@@ -495,7 +514,16 @@ class NgGroupChatController extends ChangeNotifier {
             },
           )
           .toList(growable: false);
-      rooms[group.id] = {...room, 'name': group.name, 'log': log};
+      final sessions = <String, String>{
+        for (final entry in _storedByProfile.entries)
+          'thread:$_thread::${entry.key}': entry.value,
+      };
+      rooms[group.id] = {
+        ...room,
+        'name': group.name,
+        'log': log,
+        'sessions': sessions,
+      };
       final revisions = _map(owner['ui_meta_revisions']);
       final revision = revisions['hermes-bots-groups'];
       final payload = <String, dynamic>{

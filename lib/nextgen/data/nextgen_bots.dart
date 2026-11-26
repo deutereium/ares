@@ -63,6 +63,7 @@ class NgGroupChat {
     required this.gatewayRoom,
     this.roomId,
     this.memberProfiles = const <String, String>{},
+    this.sessionIds = const <String, String>{},
   });
 
   final String id;
@@ -77,6 +78,9 @@ class NgGroupChat {
   /// Room handle → gateway profile. Mirrored rooms store one bot profile per
   /// member; hosted rooms use the `profile` from their roster row.
   final Map<String, String> memberProfiles;
+
+  /// Profile → stored hidden session id, from the Desktop room mirror.
+  final Map<String, String> sessionIds;
 
   /// Compatibility name for callers that only need display handles.
   List<String> get memberNames => members;
@@ -188,6 +192,22 @@ class NgBotsModel extends ChangeNotifier {
   static int _seconds(Object? value) {
     final n = value is num ? value : num.tryParse(value?.toString() ?? '');
     return n == null ? 0 : (n * 1000).round();
+  }
+
+  static Map<String, String> _sessionIds(
+    Object? value,
+    Map<String, String> memberProfiles,
+  ) {
+    final out = <String, String>{};
+    for (final entry in _map(value).entries) {
+      final id = entry.value?.toString();
+      if (id == null || id.isEmpty) continue;
+      final key = entry.key;
+      final member = key.contains('::') ? key.split('::').last : key;
+      final profile = memberProfiles[member] ?? member;
+      out[profile] = id;
+    }
+    return out;
   }
 
   Future<void> refresh() async {
@@ -326,6 +346,7 @@ class NgBotsModel extends ChangeNotifier {
             gatewayRoom: false,
             roomId: room['roomId']?.toString(),
             memberProfiles: memberProfiles,
+            sessionIds: _sessionIds(room['sessions'], memberProfiles),
           ),
         );
       }
@@ -362,6 +383,7 @@ class NgBotsModel extends ChangeNotifier {
       gatewayRoom: true,
       roomId: id,
       memberProfiles: memberProfiles,
+      sessionIds: _sessionIds(room['sessions'], memberProfiles),
     );
   }
 
