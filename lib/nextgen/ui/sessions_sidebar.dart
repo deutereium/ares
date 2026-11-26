@@ -687,7 +687,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             final filtered = switch (_filter) {
               NgSidebarFilter.all => chats,
               NgSidebarFilter.running =>
-                chats.where(isRunning).toList(),
+                chats.where((s) => widget.model.isRunning(s)).toList(),
               NgSidebarFilter.needsYou =>
                 chats
                     .where(
