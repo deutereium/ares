@@ -155,7 +155,7 @@ class _NgSettingsPageState extends State<NgSettingsPage> {
                       TextButton.icon(
                         onPressed: () => showNgProfileSwitcher(context),
                         icon: const Icon(Icons.swap_horiz, size: 18),
-                        label: Text(context.l10n.switch_profile),
+                        label: Text(ngL.switch_profile),
                       ),
                       TextButton.icon(
                         onPressed: scope.signInAgain,

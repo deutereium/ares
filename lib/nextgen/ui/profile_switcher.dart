@@ -3,7 +3,6 @@
 // request changes, so the switch is a metadata edit plus a gateway rebuild.
 import 'package:flutter/material.dart';
 
-import '../../core/l10n/l10n.dart';
 import '../../core/services/profile_switch_service.dart';
 import '../nextgen_preferences.dart';
 import '../nextgen_l10n.dart';
@@ -23,7 +22,7 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
   final connection = scope.connection;
   List<String> profiles;
   try {
-    profiles = await scope.gateway.dashboard.listProfiles();
+    profiles = await scope.gateway.api.listProfiles();
   } catch (e) {
     if (context.mounted) ngToast(context, '$e');
     return false;
@@ -32,9 +31,7 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
   profiles = profiles.where((p) => p != connection.gatewayProfile).toList();
 
   final current = connection.gatewayProfile;
-  final chosen = await showNgSheet<_ProfileChoice>(
-    context: context,
-    builder: (ctx) {
+  final chosen = await showNgSheet<_ProfileChoice>(context, builder: (ctx) {
       final c = NgColors.of(ctx);
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -44,7 +41,7 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                context.l10n.switch_profile,
+                ngL.switch_profile,
                 style: NgType.heading.copyWith(color: c.text),
               ),
             ),
