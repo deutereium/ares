@@ -33,37 +33,49 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
   final current = connection.gatewayProfile;
   final chosen = await showNgSheet<_ProfileChoice>(context, builder: (ctx) {
       final c = NgColors.of(ctx);
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                ngL.switch_profile,
-                style: NgType.heading.copyWith(color: c.text),
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  ngL.switch_profile,
+                  style: NgType.heading.copyWith(color: c.text),
+                ),
               ),
             ),
-          ),
-          for (final name in <String?>[null, ...profiles])
-            ListTile(
-              leading: Icon(
-                name == null ? Icons.dns_outlined : Icons.person_outline,
-                color: c.accentText,
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final name in <String?>[null, ...profiles])
+                    ListTile(
+                      leading: Icon(
+                        name == null ? Icons.dns_outlined : Icons.person_outline,
+                        color: c.accentText,
+                      ),
+                      title: Text(
+                        name ?? ngL.ng_server_default,
+                        style: TextStyle(color: c.text),
+                      ),
+                      selected: name == current,
+                      trailing: name == current
+                          ? Icon(Icons.check, color: c.accent)
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(_ProfileChoice(name)),
+                    ),
+                ],
               ),
-              title: Text(
-                name ?? ngL.ng_server_default,
-                style: TextStyle(color: c.text),
-              ),
-              selected: name == current,
-              trailing: name == current
-                  ? Icon(Icons.check, color: c.accent)
-                  : null,
-              onTap: () => Navigator.of(ctx).pop(_ProfileChoice(name)),
             ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       );
     },
   );

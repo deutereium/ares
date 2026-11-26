@@ -715,57 +715,6 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-                  child: Material(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(NgRadii.md),
-                    child: InkWell(
-                      key: const Key('ng-sidebar-profile-switch'),
-                      borderRadius: BorderRadius.circular(NgRadii.md),
-                      onTap: () => showNgProfileSwitcher(context),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 9,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 18,
-                              color: c.accentText,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    ngL.switch_profile,
-                                    style: NgType.label.copyWith(color: c.text),
-                                  ),
-                                  Text(
-                                    scope.connection.gatewayProfile ??
-                                        ngL.ng_server_default,
-                                    style: NgType.caption.copyWith(
-                                      color: c.text3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.unfold_more,
-                              size: 16,
-                              color: c.text3,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: widget.model.refresh,
@@ -773,6 +722,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
                       children: [
+                        _profileRow(c, scope),
                         _tiles(c),
                         const SizedBox(height: 8),
                         _filters(
@@ -1197,6 +1147,54 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             label: Text(ngL.ng_new_chat),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _profileRow(NgColors c, NgScope scope) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(NgRadii.md),
+        child: InkWell(
+          key: const Key('ng-sidebar-profile-switch'),
+          borderRadius: BorderRadius.circular(NgRadii.md),
+          onTap: () => showNgProfileSwitcher(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 18,
+                  color: c.accentText,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ngL.switch_profile,
+                        style: NgType.label.copyWith(color: c.text),
+                      ),
+                      Text(
+                        scope.connection.gatewayProfile ?? ngL.ng_server_default,
+                        style: NgType.caption.copyWith(color: c.text3),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.unfold_more,
+                  size: 16,
+                  color: c.text3,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

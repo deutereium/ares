@@ -53,7 +53,7 @@ jobs:
           } > "$GITHUB_WORKSPACE/key.properties"
 
       - name: Build release APK
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols
 
       - name: Verify APK
         run: |
@@ -66,6 +66,40 @@ jobs:
           sha256sum "$apk"
           ls -lh "$apk"
 
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: ares-symbols
+          path: build/symbols
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Send APK to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          short=$(git rev-parse --short HEAD)
+          sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          send_document() {
+            curl --fail-with-body --silent --show-error \
+              -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+              -F "chat_id=${TELEGRAM_CHAT_ID}" \
+              -F "document=@$1;filename=$2" \
+              -F "caption=$3"
+          }
+          if [ "$(stat -c%s "$apk")" -le 50000000 ]; then
+            send_document "$apk" "Ares-${short}-arm64.apk" "Ares ${short} arm64 | sha256 ${sha}"
+          else
+            if ! command -v zstd >/dev/null 2>&1; then
+              sudo apt-get update -qq && sudo apt-get install -y -qq zstd
+            fi
+            compressed="${apk}.zst"
+            zstd -q -c -3 "$apk" > "$compressed"
+            send_document "$compressed" "Ares-${short}-arm64.apk.zst" "Ares ${short} arm64 (zstd compressed) | sha256 ${sha}. Decompress with: zstd -d"
+          fi
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
