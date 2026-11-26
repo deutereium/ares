@@ -1757,10 +1757,12 @@ class _AssistantBlockState extends State<_AssistantBlock> {
     int index,
     NgAssistantPart part, {
     bool active = false,
+    bool animate = true,
   }) {
     return _Disclosure(
       icon: Icons.psychology_outlined,
       label: active ? ngL.ng_thinking : ngL.ng_thought,
+      animate: animate,
       open: _openThinking.contains(index),
       onTap: () => setState(() => _toggle(_openThinking, index)),
       child: Text(
@@ -1770,11 +1772,16 @@ class _AssistantBlockState extends State<_AssistantBlock> {
     );
   }
 
-  Widget _toolRowFor(int index, NgAssistantPart part) {
+  Widget _toolRowFor(
+    int index,
+    NgAssistantPart part, {
+    bool animate = true,
+  }) {
     final tool = part.tool!;
     final busy = tool.running;
     return _Disclosure(
       icon: Icons.build_outlined,
+      animate: animate,
       label: busy
           ? '${tool.name}${tool.detail == null ? '' : ' · ${tool.detail}'}'
           : ngL.ng_used(tool.name),
@@ -1829,8 +1836,8 @@ class _AssistantBlockState extends State<_AssistantBlock> {
         children: [
           for (final i in indexes)
             item.parts[i].kind == NgPartKind.reasoning
-                ? _reasoningRow(c, i, item.parts[i])
-                : _toolRowFor(i, item.parts[i]),
+                ? _reasoningRow(c, i, item.parts[i], animate: false)
+                : _toolRowFor(i, item.parts[i], animate: false),
         ],
       ),
     );
@@ -2029,14 +2036,30 @@ class _Disclosure extends StatelessWidget {
     required this.onTap,
     required this.child,
     this.busy = false,
+    this.animate = true,
   });
 
   final IconData icon;
   final String label;
   final bool open;
   final bool busy;
+  final bool animate;
   final VoidCallback onTap;
   final Widget child;
+
+  Widget _body(NgColors c, bool open) => open
+      ? Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 4),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(NgRadii.md),
+            border: Border.all(color: c.stroke),
+          ),
+          child: child,
+        )
+      : const SizedBox(width: double.infinity);
 
   @override
   Widget build(BuildContext context) {
@@ -2088,24 +2111,15 @@ class _Disclosure extends StatelessWidget {
               ),
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeInOutCubic,
-            alignment: Alignment.topLeft,
-            child: open
-                ? Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(NgRadii.md),
-                      border: Border.all(color: c.stroke),
-                    ),
-                    child: child,
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
+          if (animate)
+            AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.topLeft,
+              child: _body(c, open),
+            )
+          else
+            _body(c, open),
         ],
       ),
     );

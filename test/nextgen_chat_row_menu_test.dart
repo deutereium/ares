@@ -47,7 +47,7 @@ List<Session> _rows() => [
   _row('a', 'Alpha'),
   _row('b', 'Beta', pinned: true),
   _row('u', 'Unread one', ago: 120),
-  _row('run', 'Running job', active: true),
+  _row('run', 'Running job', active: true, ago: 5),
   _row('daily', 'Daily report', source: 'cron'),
 ];
 
