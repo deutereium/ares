@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../nextgen_l10n.dart';
+import '../nextgen_l10n.dart';
 import '../theme/nextgen_theme.dart';
 
 class NgAvatar extends StatelessWidget {
@@ -83,7 +83,7 @@ class _FacePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     final path = Path()
       ..moveTo(size.width * 0.38, size.height * 0.66)
-      ..quadraticCurveTo(
+      ..quadraticBezierTo(
         size.width * 0.5,
         size.height * 0.74,
         size.width * 0.62,
