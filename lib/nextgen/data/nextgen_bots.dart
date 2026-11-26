@@ -379,10 +379,11 @@ class NgBotsModel extends ChangeNotifier {
       _avatars[name] = avatarBytes;
     }
 
-    var row = await _readRow(name);
-    if (row == null) {
+    final firstRow = await _readRow(name);
+    if (firstRow == null) {
       throw StateError('The gateway no longer lists $name.');
     }
+    var row = firstRow;
     final cleanDescription = description.trim();
     for (var attempt = 0; attempt < 3; attempt++) {
       final current = _map(_map(row['ui_meta'])['hermes-bots']);
@@ -418,10 +419,11 @@ class NgBotsModel extends ChangeNotifier {
         await refresh();
         return true;
       }
-      row = await _readRow(name);
-      if (row == null) {
+      final nextRow = await _readRow(name);
+      if (nextRow == null) {
         throw StateError('The gateway no longer lists $name.');
       }
+      row = nextRow;
     }
     throw StateError('$name changed on another device; try again.');
   }
