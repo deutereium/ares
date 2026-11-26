@@ -202,7 +202,7 @@ class NgBotsModel extends ChangeNotifier {
     for (final entry in _map(value).entries) {
       final id = entry.value?.toString();
       if (id == null || id.isEmpty) continue;
-      final key = entry.key;
+      final key = entry.key.toString();
       final member = key.contains('::') ? key.split('::').last : key;
       final profile = memberProfiles[member] ?? member;
       out[profile] = id;

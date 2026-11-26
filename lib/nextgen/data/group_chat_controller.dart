@@ -82,6 +82,7 @@ class NgGroupChatController extends ChangeNotifier {
   static bool _isSessionAbsent(Object error) {
     if (error is JsonRpcError) {
       if (error.code == 4007 || error.code == 404) return true;
+      if (error.reason?.toLowerCase() == 'not_found') return true;
       if (error.message.toLowerCase().contains('session not found')) {
         return true;
       }
@@ -515,6 +516,9 @@ class NgGroupChatController extends ChangeNotifier {
           )
           .toList(growable: false);
       final sessions = <String, String>{
+        for (final entry in _map(room['sessions']).entries)
+          if (entry.value?.toString().isNotEmpty ?? false)
+            entry.key.toString(): entry.value!.toString(),
         for (final entry in _storedByProfile.entries)
           'thread:$_thread::${entry.key}': entry.value,
       };
@@ -529,7 +533,12 @@ class NgGroupChatController extends ChangeNotifier {
       final payload = <String, dynamic>{
         'name': name,
         'ui_meta': {
-          'hermes-bots-groups': {...mirror, 'rooms': rooms},
+          'hermes-bots-groups': {
+            ...mirror,
+            'version': mirror['version'] ?? 3,
+            'updatedAt': DateTime.now().millisecondsSinceEpoch,
+            'rooms': rooms,
+          },
         },
       };
       if (revision != null) {
