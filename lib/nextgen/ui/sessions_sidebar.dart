@@ -490,12 +490,11 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   final _scroll = ScrollController();
   NgSidebarFilter _filter = NgSidebarFilter.all;
   NgSidebarTab _tab = NgSidebarTab.sessions;
-  late final NgBotsModel _bots;
+  NgBotsModel? _bots;
 
   @override
   void initState() {
     super.initState();
-    _bots = widget.bots ?? NgBotsModel(NgScope.of(context));
     _search.text = widget.model.query;
     // The model and its server cursor outlive the drawer. Reopening it must
     // not show All while still paging the unfiltered Crons authority.
@@ -508,11 +507,17 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bots ??= widget.bots ?? NgBotsModel(NgScope.of(context));
+  }
+
+  @override
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
     _scroll.dispose();
-    if (widget.bots == null) _bots.dispose();
+    if (widget.bots == null) _bots?.dispose();
     super.dispose();
   }
 
@@ -700,7 +705,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
       shape: const RoundedRectangleBorder(),
       child: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge([widget.model, _bots, scope.gateway]),
+          listenable: Listenable.merge([widget.model, _bots!, scope.gateway]),
           builder: (context, _) {
             final needsYou = scope.gateway.needsYou;
             final all = widget.model.sessions;
@@ -737,7 +742,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     focusNode: _searchFocus,
                     onChanged: (value) {
                       if (_tab == NgSidebarTab.bots) {
-                        _bots.query = value;
+                        _bots!.query = value;
                       } else {
                         widget.model.search(value);
                       }
@@ -765,7 +770,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                               onPressed: () {
                                 _search.clear();
                                 if (_tab == NgSidebarTab.bots) {
-                                  _bots.query = '';
+                                  _bots!.query = '';
                                 } else {
                                   widget.model.clearSearch();
                                 }
@@ -792,7 +797,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                 if (_tab == NgSidebarTab.bots)
                   Expanded(
                     child: NgBotsPane(
-                      model: _bots,
+                      model: _bots!,
                       onOpenBot: widget.onOpenBot ?? (_) {},
                       onOpenGroup: widget.onOpenGroup ?? (_) {},
                     ),
@@ -909,7 +914,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
         onTap: () {
           if (_tab == value) return;
           setState(() => _tab = value);
-          if (value == NgSidebarTab.bots) _bots.query = _search.text;
+          if (value == NgSidebarTab.bots)                          _bots!.query = _search.text;
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
