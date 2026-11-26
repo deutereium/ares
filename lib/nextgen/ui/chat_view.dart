@@ -1583,8 +1583,8 @@ class _AssistantBlock extends StatefulWidget {
 }
 
 class _AssistantBlockState extends State<_AssistantBlock> {
-  bool _showThinking = false;
-  bool _showTools = false;
+  final Set<int> _openThinking = {};
+  final Set<int> _openTools = {};
 
   /// Rendered content by source text. Returning the same widget lets Flutter
   /// skip it, so typing, the turn timer and streamed tokens re-parse only
@@ -1595,7 +1595,11 @@ class _AssistantBlockState extends State<_AssistantBlock> {
   /// The reply text with the agent's `MEDIA:/path` deliveries as file cards
   /// (download, open, share), like the classic chat. Mid-line refs and
   /// Markdown links to delivered files stay links that open the same card.
-  List<Widget> _content(NgColors c, NgAssistantItem item) {
+  List<Widget> _content(
+    NgColors c,
+    NgAssistantItem item, {
+    String? textOverride,
+  }) {
     final isFinal = !item.open;
     // Theme.of can hand back an equal but new ThemeData on each build, so
     // the cache keys on what the style sheet below reads.
@@ -1686,7 +1690,7 @@ class _AssistantBlockState extends State<_AssistantBlock> {
       ),
     );
 
-    final text = item.text;
+    final text = textOverride ?? item.text;
     final out = <Widget>[];
     final cardPaths = <String>{};
     final seen = <String, int>{};
@@ -1743,57 +1747,126 @@ class _AssistantBlockState extends State<_AssistantBlock> {
     return true;
   }
 
+  void _toggle(Set<int> set, int index) {
+    if (!set.remove(index)) set.add(index);
+  }
+
+  /// Thoughts, tool calls and answer chunks in the order the gateway sent
+  /// them. Items without ordered parts keep the old grouped layout.
+  List<Widget> _orderedContent(NgColors c, NgAssistantItem item) {
+    final parts = item.parts;
+    if (parts.isEmpty) {
+      final legacy = <Widget>[];
+      if (item.reasoning.trim().isNotEmpty) {
+        legacy.add(
+          _Disclosure(
+            icon: Icons.psychology_outlined,
+            label: item.open && item.text.isEmpty
+                ? ngL.ng_thinking
+                : ngL.ng_thought,
+            open: _openThinking.contains(0),
+            onTap: () => setState(() => _toggle(_openThinking, 0)),
+            child: Text(
+              item.reasoning.trim(),
+              style: NgType.bodySmall.copyWith(color: c.text3),
+            ),
+          ),
+        );
+      }
+      if (item.tools.isNotEmpty) {
+        final runningTool = item.tools.where((t) => t.running).lastOrNull;
+        legacy.add(
+          _Disclosure(
+            icon: Icons.build_outlined,
+            label: runningTool != null
+                ? '${runningTool.name}${runningTool.detail == null ? '' : ' · ${runningTool.detail}'}'
+                : item.tools.length == 1
+                ? ngL.ng_used(item.tools.first.name)
+                : ngL.ng_used_tools(item.tools.length),
+            busy: runningTool != null,
+            open: _openTools.contains(0),
+            onTap: () => setState(() => _toggle(_openTools, 0)),
+            child: Column(
+              children: [for (final t in item.tools) _ToolRow(tool: t)],
+            ),
+          ),
+        );
+      }
+      if (item.text.isNotEmpty) {
+        legacy.add(
+          SelectionArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: _content(c, item),
+            ),
+          ),
+        );
+      }
+      return legacy;
+    }
+
+    final out = <Widget>[];
+    for (var i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      switch (part.kind) {
+        case NgPartKind.reasoning:
+          final active = item.open && i == parts.length - 1;
+          out.add(
+            _Disclosure(
+              icon: Icons.psychology_outlined,
+              label: active ? ngL.ng_thinking : ngL.ng_thought,
+              open: _openThinking.contains(i),
+              onTap: () => setState(() => _toggle(_openThinking, i)),
+              child: Text(
+                part.text.trim(),
+                style: NgType.bodySmall.copyWith(color: c.text3),
+              ),
+            ),
+          );
+        case NgPartKind.tool:
+          final tool = part.tool!;
+          final busy = tool.running;
+          out.add(
+            _Disclosure(
+              icon: Icons.build_outlined,
+              label: busy
+                  ? '${tool.name}${tool.detail == null ? '' : ' · ${tool.detail}'}'
+                  : ngL.ng_used(tool.name),
+              busy: busy,
+              open: _openTools.contains(i),
+              onTap: () => setState(() => _toggle(_openTools, i)),
+              child: _ToolRow(tool: tool),
+            ),
+          );
+        case NgPartKind.text:
+          if (part.text.isNotEmpty) {
+            out.add(
+              SelectionArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: _content(c, item, textOverride: part.text),
+                ),
+              ),
+            );
+          }
+      }
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
     final item = widget.item;
-    final tools = item.tools;
-    final runningTool = tools.where((t) => t.running).lastOrNull;
     final reading = widget.readAloud.isReading(item.key);
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (item.reasoning.trim().isNotEmpty)
-            _Disclosure(
-              icon: Icons.psychology_outlined,
-              label: item.open && item.text.isEmpty
-                  ? ngL.ng_thinking
-                  : ngL.ng_thought,
-              open: _showThinking,
-              onTap: () => setState(() => _showThinking = !_showThinking),
-              child: Text(
-                item.reasoning.trim(),
-                style: NgType.bodySmall.copyWith(color: c.text3),
-              ),
-            ),
-          if (tools.isNotEmpty)
-            _Disclosure(
-              icon: Icons.build_outlined,
-              label: runningTool != null
-                  ? '${runningTool.name}${runningTool.detail == null ? '' : ' · ${runningTool.detail}'}'
-                  : tools.length == 1
-                  ? ngL.ng_used(tools.first.name)
-                  : ngL.ng_used_tools(tools.length),
-              busy: runningTool != null,
-              open: _showTools,
-              onTap: () => setState(() => _showTools = !_showTools),
-              child: Column(
-                children: [for (final t in tools) _ToolRow(tool: t)],
-              ),
-            ),
-          if (item.text.isNotEmpty)
-            // One SelectionArea spans the whole reply so a single drag can
-            // select across paragraphs, lists and code fences — as much of
-            // the response as the user wants, not just one block.
-            SelectionArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: _content(c, item),
-              ),
-            ),
+          ..._orderedContent(c, item),
           if (!item.open && item.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),

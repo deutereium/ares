@@ -548,16 +548,16 @@ void main() {
 /// Title, time, unread-dot and spinner rects of the phone fixture on
 /// 66fb445, before the menu existed.
 const _kAndroidRects = <String, Rect>{
-  'On screen': Rect.fromLTRB(22.0, 407.0, 280.13999938964844, 424.0),
-  'On screen time': Rect.fromLTRB(288.13999938964844, 407.5, 312.0, 423.5),
-  'Alpha': Rect.fromLTRB(22.0, 446.0, 280.13999938964844, 463.0),
-  'Alpha time': Rect.fromLTRB(288.13999938964844, 446.5, 312.0, 462.5),
-  'Beta': Rect.fromLTRB(22.0, 326.0, 280.13999938964844, 343.0),
-  'Beta time': Rect.fromLTRB(288.13999938964844, 326.5, 312.0, 342.5),
-  'Unread one': Rect.fromLTRB(22.0, 485.0, 264.13999938964844, 502.0),
-  'Unread one time': Rect.fromLTRB(272.13999938964844, 485.5, 296.0, 501.5),
-  'Running job': Rect.fromLTRB(42.0, 524.0, 280.13999938964844, 541.0),
-  'Running job time': Rect.fromLTRB(288.13999938964844, 524.5, 312.0, 540.5),
-  'dot': Rect.fromLTRB(304.0, 489.5, 312.0, 497.5),
-  'spinner': Rect.fromLTRB(22.0, 527.5, 32.0, 537.5),
+  'On screen': Rect.fromLTRB(22.0, 466.0, 280.13999938964844, 483.0),
+  'On screen time': Rect.fromLTRB(288.13999938964844, 466.5, 312.0, 482.5),
+  'Alpha': Rect.fromLTRB(22.0, 505.0, 280.13999938964844, 522.0),
+  'Alpha time': Rect.fromLTRB(288.13999938964844, 505.5, 312.0, 521.5),
+  'Beta': Rect.fromLTRB(22.0, 385.0, 280.13999938964844, 402.0),
+  'Beta time': Rect.fromLTRB(288.13999938964844, 385.5, 312.0, 401.5),
+  'Unread one': Rect.fromLTRB(22.0, 544.0, 264.13999938964844, 561.0),
+  'Unread one time': Rect.fromLTRB(272.13999938964844, 544.5, 296.0, 560.5),
+  'Running job': Rect.fromLTRB(42.0, 583.0, 280.13999938964844, 600.0),
+  'Running job time': Rect.fromLTRB(288.13999938964844, 583.5, 312.0, 599.5),
+  'dot': Rect.fromLTRB(304.0, 548.5, 312.0, 556.5),
+  'spinner': Rect.fromLTRB(22.0, 586.5, 32.0, 596.5),
 };

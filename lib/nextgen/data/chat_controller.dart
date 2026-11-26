@@ -221,10 +221,35 @@ class NgCommandItem extends NgItem {
   NgCommandItem(super.key, this.command, {required this.time});
 }
 
+/// One chronological piece of a reply. Desktop shows thoughts, tools and
+/// answers as they happened; the old single text/reasoning buffers lost that
+/// order whenever a model thought again after a tool call.
+enum NgPartKind { reasoning, text, tool }
+
+class NgAssistantPart {
+  NgAssistantPart._(this.kind, {this.text = '', this.tool});
+
+  final NgPartKind kind;
+  String text;
+  final NgTool? tool;
+
+  factory NgAssistantPart.reasoning(String text) =>
+      NgAssistantPart._(NgPartKind.reasoning, text: text);
+  factory NgAssistantPart.text(String text) =>
+      NgAssistantPart._(NgPartKind.text, text: text);
+  factory NgAssistantPart.tool(NgTool tool) =>
+      NgAssistantPart._(NgPartKind.tool, tool: tool);
+}
+
 class NgAssistantItem extends NgItem {
   String text = '';
   String reasoning = '';
   final List<NgTool> tools = [];
+
+  /// Thoughts, tools and answer chunks in the order they happened. Empty on
+  /// items built by older code or tests; the view then uses the flat fields.
+  final List<NgAssistantPart> parts = [];
+
   bool open;
   DateTime? time;
   int? inputTokens;
@@ -232,7 +257,63 @@ class NgAssistantItem extends NgItem {
 
   NgAssistantItem(super.key, {this.open = true, this.time});
 
-  bool get isEmpty => text.isEmpty && reasoning.isEmpty && tools.isEmpty;
+  bool get isEmpty =>
+      text.isEmpty && reasoning.isEmpty && tools.isEmpty && parts.isEmpty;
+
+  void _appendText(String chunk, NgPartKind kind) {
+    if (chunk.isEmpty) return;
+    if (parts.isEmpty || parts.last.kind != kind) {
+      parts.add(kind == NgPartKind.reasoning
+          ? NgAssistantPart.reasoning('')
+          : NgAssistantPart.text(''));
+    }
+    parts.last.text += chunk;
+  }
+
+  /// Streams reasoning into the current thought block, or opens a new one
+  /// when text or a tool interrupted the previous block.
+  void appendReasoning(String chunk) {
+    reasoning += chunk;
+    _appendText(chunk, NgPartKind.reasoning);
+  }
+
+  /// Streams answer text into the current answer block.
+  void appendText(String chunk) {
+    text += chunk;
+    _appendText(chunk, NgPartKind.text);
+  }
+
+  /// Adds one complete thought from stored history. Separate stored messages
+  /// must stay separate thoughts instead of gluing into one long block.
+  void addReasoningBlock(String block) {
+    if (block.trim().isEmpty) return;
+    reasoning = reasoning.isEmpty ? block : '$reasoning\n\n$block';
+    parts.add(NgAssistantPart.reasoning(block));
+  }
+
+  /// Adds one complete answer chunk from stored history.
+  void addTextBlock(String block) {
+    if (block.trim().isEmpty) return;
+    text = text.isEmpty ? block : '$text\n\n$block';
+    parts.add(NgAssistantPart.text(block));
+  }
+
+  void addTool(NgTool tool) {
+    tools.add(tool);
+    parts.add(NgAssistantPart.tool(tool));
+  }
+
+  void removeTool(String id) {
+    tools.removeWhere((t) => t.id == id);
+    parts.removeWhere((p) => p.kind == NgPartKind.tool && p.tool?.id == id);
+  }
+
+  /// A final full answer replaces streamed chunks when the app missed deltas.
+  void replaceText(String block) {
+    text = block;
+    parts.removeWhere((p) => p.kind == NgPartKind.text);
+    if (block.isNotEmpty) parts.add(NgAssistantPart.text(block));
+  }
 }
 
 class NgNoticeItem extends NgItem {
@@ -1135,7 +1216,7 @@ class NgChatController extends ChangeNotifier {
             );
           } else {
             reply = NgAssistantItem(_key('a'), open: false);
-            reply.text = split.$2;
+            reply.addTextBlock(split.$2);
             items.add(reply);
           }
           continue;
@@ -1171,14 +1252,8 @@ class NgChatController extends ChangeNotifier {
         }();
         final reasoning =
             (m['display_reasoning'] ?? m['reasoning'])?.toString() ?? '';
-        if (reasoning.trim().isNotEmpty) {
-          reply.reasoning = reply.reasoning.isEmpty
-              ? reasoning
-              : '${reply.reasoning}\n\n$reasoning';
-        }
-        if (text.trim().isNotEmpty) {
-          reply.text = reply.text.isEmpty ? text : '${reply.text}\n\n$text';
-        }
+        reply.addReasoningBlock(reasoning);
+        reply.addTextBlock(text);
         reply.time = _time(m['timestamp']) ?? reply.time;
         final calls = m['tool_calls'];
         if (calls is List) {
@@ -1205,7 +1280,7 @@ class NgChatController extends ChangeNotifier {
               startedAt: _time(m['timestamp']),
             );
             toolsById[id] = tool;
-            reply.tools.add(tool);
+            reply.addTool(tool);
           }
         }
       } else if (role == 'tool') {
@@ -1670,7 +1745,7 @@ class NgChatController extends ChangeNotifier {
       case 'message.delta':
         final chunk = s('text');
         if (chunk != null && chunk.isNotEmpty) {
-          _openReply().text += chunk;
+          _openReply().appendText(chunk);
           running = true;
           thinkingFrame = null;
         }
@@ -1678,12 +1753,12 @@ class NgChatController extends ChangeNotifier {
         if (p['already_streamed'] != true) {
           final chunk = s('text');
           if (chunk != null && chunk.isNotEmpty) {
-            _openReply().text += '$chunk\n\n';
+            _openReply().appendText('$chunk\n\n');
           }
         }
       case 'reasoning.delta' || 'reasoning.available':
         final chunk = s('text');
-        if (chunk != null) _openReply().reasoning += chunk;
+        if (chunk != null) _openReply().appendReasoning(chunk);
       case 'thinking.delta':
         final frame = s('text')?.trim();
         if (frame != null && frame.isNotEmpty) thinkingFrame = frame;
@@ -1691,8 +1766,8 @@ class NgChatController extends ChangeNotifier {
         final id = s('tool_id');
         if (id == null) return;
         final reply = _openReply();
-        reply.tools.removeWhere((t) => t.id == id);
-        reply.tools.add(
+        reply.removeTool(id);
+        reply.addTool(
           NgTool(
             id: id,
             name: s('name') ?? 'tool',
@@ -1721,7 +1796,7 @@ class NgChatController extends ChangeNotifier {
         }
         tool ??= () {
           final t = NgTool(id: id, name: s('name') ?? 'tool');
-          _openReply().tools.add(t);
+          _openReply().addTool(t);
           return t;
         }();
         tool.running = false;
@@ -1823,7 +1898,7 @@ class NgChatController extends ChangeNotifier {
         final text = s('text');
         if (text != null &&
             (reply.text.isEmpty || _replyGap && text.trim().isNotEmpty)) {
-          reply.text = text;
+          reply.replaceText(text);
         }
         final u = NgUsage.parse(p['usage']);
         if (u != null) {
