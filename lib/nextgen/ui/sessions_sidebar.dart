@@ -1216,12 +1216,17 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Text(
-            '${ngL.ng_agent_gateway}: ${state.label}',
-            style: NgType.caption.copyWith(color: c.text2),
+          Expanded(
+            child: Text(
+              '${ngL.ng_agent_gateway}: ${state.label}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: NgType.caption.copyWith(color: c.text2),
+            ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 6),
+          Expanded(
+            flex: 2,
             child: Text(
               scope.gateway.url.display,
               maxLines: 1,
