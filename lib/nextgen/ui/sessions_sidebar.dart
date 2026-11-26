@@ -728,7 +728,10 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-                  child: TextField(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
                     key: const Key('ng-session-search'),
                     controller: _search,
                     focusNode: _searchFocus,
@@ -780,23 +783,10 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                       ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                  child: NgSegmented<NgSidebarTab>(
-                    key: const Key('ng-sidebar-tabs'),
-                    values: NgSidebarTab.values,
-                    selected: _tab,
-                    labelOf: (tab) => switch (tab) {
-                      NgSidebarTab.sessions => ngL.ng_sessions,
-                      NgSidebarTab.bots => ngL.ng_bots,
-                    },
-                    onChanged: (tab) {
-                      setState(() => _tab = tab);
-                      if (tab == NgSidebarTab.bots) {
-                        _bots.query = _search.text;
-                      }
-                    },
+                      ),
+                      const SizedBox(width: 8),
+                      _tabToggle(c),
+                    ],
                   ),
                 ),
                 if (_tab == NgSidebarTab.bots)
@@ -907,6 +897,50 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _tabToggle(NgColors c) {
+    Widget tab(NgSidebarTab value, String label) {
+      final selected = _tab == value;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (_tab == value) return;
+          setState(() => _tab = value);
+          if (value == NgSidebarTab.bots) _bots.query = _search.text;
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? c.thumb : Colors.transparent,
+            borderRadius: BorderRadius.circular(NgRadii.full),
+          ),
+          child: Text(
+            label,
+            style: NgType.caption.copyWith(
+              color: selected ? c.text : c.text3,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      key: const Key('ng-sidebar-tabs'),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: c.well,
+        borderRadius: BorderRadius.circular(NgRadii.full),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tab(NgSidebarTab.sessions, ngL.ng_sessions),
+          tab(NgSidebarTab.bots, ngL.ng_bots),
+        ],
       ),
     );
   }

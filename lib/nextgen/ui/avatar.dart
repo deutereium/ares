@@ -20,29 +20,25 @@ class NgAvatar extends StatelessWidget {
   final Uint8List? bytes;
   final double size;
 
-  static const _palette = <Color>[
-    Color(0xFF8B5CF6),
-    Color(0xFF3B82F6),
-    Color(0xFF06B6D4),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
-    Color(0xFFEC4899),
-  ];
-
-  static Color colorFor(String name) {
+  static Color colorFor(BuildContext context, String name) {
+    final c = NgColors.of(context);
     var hash = 0;
     for (final unit in utf8.encode(name.isEmpty ? '?' : name)) {
       hash = (hash * 31 + unit) & 0x7fffffff;
     }
-    if (name == 'default') return const Color(0xFF8B5CF6);
-    return _palette[hash % _palette.length];
+    if (name == 'default') return c.accent;
+    final base = HSVColor.fromColor(c.accentText);
+    return base
+        .withHue((base.hue + (hash % 7) * 47) % 360)
+        .withSaturation(0.55)
+        .withValue(0.82)
+        .toColor();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
-    final color = colorFor(name);
+    final color = colorFor(context, name);
     final radius = BorderRadius.circular(size * 0.22);
     return ClipRRect(
       borderRadius: radius,
