@@ -31,6 +31,7 @@ import '../data/read_aloud.dart';
 import '../data/slash_catalog.dart';
 import '../data/slash_exec.dart';
 import '../theme/nextgen_theme.dart';
+import 'avatar.dart';
 import 'model_sheet.dart';
 import 'nextgen_scope.dart';
 import 'project_greeting.dart';
@@ -518,23 +519,6 @@ class _NgChatViewState extends State<NgChatView> {
     );
   }
 
-  String _subtitle(NgConnectionState state) {
-    if (!state.isConnected) return state.label;
-    if (chat.running) {
-      final started = chat.turnStartedAt;
-      final secs = started == null
-          ? 0
-          : DateTime.now().difference(started).inSeconds;
-      final step = chat.status?.trim();
-      return [
-        ngL.ng_working,
-        if (step != null && step.isNotEmpty) step,
-        if (secs > 0) '${secs}s',
-      ].join(' · ');
-    }
-    return chat.model ?? ngL.ng_ready;
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
@@ -543,6 +527,16 @@ class _NgChatViewState extends State<NgChatView> {
       listenable: gateway,
       builder: (context, _) {
         final state = gateway.state;
+        final identity = chat.identity;
+        final isBot = identity?.isBot ?? false;
+        final botName = identity?.botName?.trim() ?? '';
+        final botDescription = identity?.botDescription?.trim() ?? '';
+        final profileName =
+            identity?.profileName ?? gateway.profile ?? 'default';
+        final headerTitle = isBot ? botName : profileName;
+        final headerSubtitle = isBot
+            ? (botDescription.isEmpty ? ngL.ng_ready : botDescription)
+            : (chat.title.isEmpty ? ngL.ng_new_chat : chat.title);
         return Scaffold(
           backgroundColor: c.background,
           appBar: AppBar(
@@ -576,22 +570,36 @@ class _NgChatViewState extends State<NgChatView> {
             ),
             titleSpacing: 0,
             title: GestureDetector(
-              onTap: chat.isNew ? null : _rename,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              onTap: chat.isNew || isBot ? null : _rename,
+              child: Row(
                 children: [
-                  Text(
-                    chat.title.isEmpty ? ngL.ng_new_chat : chat.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: NgType.heading.copyWith(color: c.text),
-                  ),
-                  Text(
-                    _subtitle(state),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: NgType.caption.copyWith(
-                      color: state.isConnected ? c.text3 : c.warning,
+                  if (isBot) ...[
+                    NgAvatar(
+                      name: botName,
+                      bytes: identity?.avatarBytes,
+                      size: 36,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          headerTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: NgType.heading.copyWith(color: c.text),
+                        ),
+                        Text(
+                          headerSubtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: NgType.caption.copyWith(
+                            color: state.isConnected ? c.text3 : c.warning,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -768,6 +776,11 @@ class _NgChatViewState extends State<NgChatView> {
             style: NgType.bodySmall.copyWith(color: c.text),
           ),
         ),
+        if (chat.resumeError != null)
+          TextButton(
+            onPressed: () => unawaited(chat.retryResume()),
+            child: Text(ngL.ng_retry),
+          ),
         IconButton(
           icon: const Icon(Icons.close, size: 18),
           onPressed: () => setState(() => chat.error = null),

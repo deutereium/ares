@@ -469,6 +469,8 @@ class NgSessionsSidebar extends StatefulWidget {
     this.bots,
     this.onOpenBot,
     this.onOpenGroup,
+    this.selectedTab,
+    this.onTabChanged,
   });
 
   final NgSessionsModel model;
@@ -479,6 +481,13 @@ class NgSessionsSidebar extends StatefulWidget {
   final NgBotsModel? bots;
   final ValueChanged<NgBot>? onOpenBot;
   final ValueChanged<NgGroupChat>? onOpenGroup;
+
+  /// The tab the sidebar shows. When supplied, the owner keeps it across
+  /// drawer rebuilds; otherwise the sidebar keeps it locally.
+  final NgSidebarTab? selectedTab;
+
+  /// Fired when the user switches tabs, so the owner can persist it.
+  final ValueChanged<NgSidebarTab>? onTabChanged;
 
   @override
   State<NgSessionsSidebar> createState() => _NgSessionsSidebarState();
@@ -495,6 +504,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   @override
   void initState() {
     super.initState();
+    _tab = widget.selectedTab ?? NgSidebarTab.sessions;
     _search.text = widget.model.query;
     // The model and its server cursor outlive the drawer. Reopening it must
     // not show All while still paging the unfiltered Crons authority.
@@ -504,6 +514,13 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 400) widget.model.loadMore();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant NgSessionsSidebar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final selected = widget.selectedTab;
+    if (selected != null) _tab = selected;
   }
 
   @override
@@ -914,7 +931,8 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
         onTap: () {
           if (_tab == value) return;
           setState(() => _tab = value);
-          if (value == NgSidebarTab.bots)                          _bots!.query = _search.text;
+          widget.onTabChanged?.call(value);
+          if (value == NgSidebarTab.bots) _bots!.query = _search.text;
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),

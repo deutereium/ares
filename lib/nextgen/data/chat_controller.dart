@@ -655,10 +655,31 @@ class NgUsage {
   }
 }
 
+/// Who a chat belongs to when it is not the connection's ordinary profile:
+/// a bot's own profile, plus the identity its header shows.
+@immutable
+class NgChatIdentity {
+  const NgChatIdentity({
+    this.profileName,
+    this.botName,
+    this.botDescription,
+    this.avatarBytes,
+  });
+
+  final String? profileName;
+  final String? botName;
+  final String? botDescription;
+  final Uint8List? avatarBytes;
+
+  bool get isBot => botName != null && botName!.trim().isNotEmpty;
+}
+
 class NgChatController extends ChangeNotifier {
   NgChatController(
     this.gateway, {
     String? sessionId,
+    String? sessionProfile,
+    this.identity,
     this.title = '',
     String? workingDirectory,
     this.onCreated,
@@ -668,6 +689,7 @@ class NgChatController extends ChangeNotifier {
     // ignore: prefer_initializing_formals
   }) : _workingDirectory = workingDirectory,
        storedId = sessionId,
+       sessionProfile = _profileOrNull(sessionProfile),
        attachmentService = attachmentService ?? AttachmentDraftService() {
     _subs.add(gateway.events.listen(_onEvent));
     _subs.add(gateway.serverRequests.listen(_onServerRequest));
@@ -677,6 +699,25 @@ class NgChatController extends ChangeNotifier {
   }
 
   final NextGenGateway gateway;
+
+  /// The profile a bot chat lives on; null for the connection's own profile.
+  final String? sessionProfile;
+
+  /// The bot identity the header shows, when this is a bot chat.
+  final NgChatIdentity? identity;
+
+  static String? _profileOrNull(String? value) {
+    final v = value?.trim();
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  /// Adds this chat's own profile to an RPC that is profile-scoped. Ordinary
+  /// chats leave the gateway to use the connection's profile.
+  Map<String, dynamic> _scoped(Map<String, dynamic> params) {
+    final profile = sessionProfile;
+    return profile == null ? params : {...params, 'profile': profile};
+  }
+
   String? _workingDirectory;
   String? get workingDirectory => _workingDirectory;
   bool _creatingSession = false;
@@ -751,12 +792,25 @@ class NgChatController extends ChangeNotifier {
       limit: limit,
       offset: offset,
       latest: true,
+      profile: sessionProfile,
     ),
   );
   String? historyError;
   String? status;
   String? thinkingFrame;
   String? error;
+
+  /// Why the live bind failed, when retries are exhausted or the session is
+  /// definitively gone. The header shows a manual Retry while this is set.
+  String? resumeError;
+
+  /// Delays between `session.resume` attempts: one initial try, then one per
+  /// entry. Tests may shorten them; terminal errors are never retried.
+  List<Duration> resumeRetryDelays = const [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+  ];
   NgInputRequest? request;
   String? model;
   String? provider;
@@ -872,27 +926,29 @@ class NgChatController extends ChangeNotifier {
     }
   }
 
+  int _attachGeneration = 0;
+
   Future<void> _attach() async {
     final id = storedId;
     if (id == null || _disposed) return;
+    // A newer bind supersedes one already in flight: the older attempt's
+    // resume result must not be applied after this generation took over.
+    final generation = ++_attachGeneration;
     if (_attaching) {
       await _attachCompleter?.future;
-      return;
+      if (_disposed || generation != _attachGeneration) return;
     }
     _attaching = true;
     final attaching = Completer<void>();
     _attachCompleter = attaching;
     try {
       await gateway.connected();
+      if (_disposed || generation != _attachGeneration) return;
       final known = gateway.openRequestIdsFor([id, runtimeId]);
-      final result = await gateway.call('session.resume', {
-        'session_id': id,
-        'source': 'desktop',
-        'omit_messages': true,
-        'defer_history': true,
-        // The canonical resume model forbids inline_images (#291).
-        if (!gateway.sessionAuthority) 'inline_images': false,
-      });
+      final result = await _resumeWithRetry(id, generation);
+      if (result == null || _disposed || generation != _attachGeneration) {
+        return;
+      }
       _withAuthority(result);
       // The first canonical attach starts the cursor at the snapshot's
       // watermark. A later one (a poll, a re-attach after a replay) keeps the
@@ -907,6 +963,10 @@ class NgChatController extends ChangeNotifier {
       if (running && !wasRunning) turnStartedAt ??= DateTime.now();
       _withInfo(result['info']);
       _withTodos(NgTodoList.parse(result['todo_state']));
+      // A successful re-bind clears the earlier "live updates unavailable"
+      // banner, not an unrelated error the chat is showing.
+      if (resumeError != null) error = null;
+      resumeError = null;
       _attachedOnce = true;
       unawaited(refreshControl());
       unawaited(refreshSubagents());
@@ -918,15 +978,66 @@ class NgChatController extends ChangeNotifier {
       }
       _changed();
     } catch (e) {
-      if (!_disposed) {
-        error = ngL.ng_live_updates_are_unavailable(_clean(e));
+      if (!_disposed && generation == _attachGeneration) {
+        final message = _clean(e);
+        resumeError = message;
+        error = ngL.ng_live_updates_are_unavailable(message);
         _changed();
       }
     } finally {
       _attaching = false;
       if (!attaching.isCompleted) attaching.complete();
-      _attachCompleter = null;
+      if (generation == _attachGeneration) _attachCompleter = null;
     }
+  }
+
+  /// Resumes with a bounded budget: one initial attempt plus one per
+  /// [resumeRetryDelays] entry. A definitive "session not found" is terminal
+  /// and surfaces at once instead of being retried against a dead id.
+  Future<Map<String, dynamic>?> _resumeWithRetry(
+    String id,
+    int generation,
+  ) async {
+    final delays = resumeRetryDelays;
+    var attempt = 0;
+    while (true) {
+      if (_disposed || generation != _attachGeneration) return null;
+      try {
+        return await gateway.call(
+          'session.resume',
+          _scoped({
+            'session_id': id,
+            'source': 'desktop',
+            'omit_messages': true,
+            'defer_history': true,
+            // The canonical resume model forbids inline_images (#291).
+            if (!gateway.sessionAuthority) 'inline_images': false,
+          }),
+        );
+      } catch (e) {
+        if (_isTerminalResumeError(e) || attempt >= delays.length) rethrow;
+        final delay = delays[attempt++];
+        if (delay > Duration.zero) await Future<void>.delayed(delay);
+      }
+    }
+  }
+
+  static bool _isTerminalResumeError(Object e) {
+    if (e is JsonRpcError) {
+      if (e.code == 4007 || e.code == 404) return true;
+      if (e.message.toLowerCase().contains('session not found')) return true;
+    }
+    return e.toString().toLowerCase().contains('session not found');
+  }
+
+  /// Retries the live bind after retries were exhausted (or a stale id was
+  /// reported missing) without re-sending any prompt.
+  Future<void> retryResume() async {
+    if (_disposed || storedId == null) return;
+    resumeError = null;
+    error = null;
+    _changed();
+    await _attach();
   }
 
   static int? _authorityInt(Object? value) {
@@ -1523,6 +1634,9 @@ class NgChatController extends ChangeNotifier {
       await _catchUp(resubscribe: true);
       return;
     }
+    // The runtime id belonged to the socket that dropped; rebind by the
+    // durable stored id rather than trusting it.
+    runtimeId = null;
     await _attach();
     await _catchUp();
   }
@@ -1546,11 +1660,14 @@ class NgChatController extends ChangeNotifier {
       if (cursor != null) {
         try {
           final known = gateway.openRequestIdsFor([rt, storedId]);
-          final reply = await gateway.call('session.events.since', {
-            'session_id': rt,
-            'replay_epoch': cursor.epoch,
-            'last_sequence': cursor.sequence,
-          });
+          final reply = await gateway.call(
+            'session.events.since',
+            _scoped({
+              'session_id': rt,
+              'replay_epoch': cursor.epoch,
+              'last_sequence': cursor.sequence,
+            }),
+          );
           missed = ngParseCanonicalReplay(
             reply,
             rt,
@@ -1567,10 +1684,10 @@ class NgChatController extends ChangeNotifier {
       if (from != null && _seqEpoch == _readyEpoch()) {
         try {
           final known = gateway.openRequestIdsFor([rt, storedId]);
-          final reply = await gateway.call('session.events.since', {
-            'session_id': rt,
-            'last_seen': from,
-          });
+          final reply = await gateway.call(
+            'session.events.since',
+            _scoped({'session_id': rt, 'last_seen': from}),
+          );
           missed = ngParseReplay(reply, rt, from, _seqEpoch);
           gateway.reconcileOpenRequests(reply['open_requests'], known: known);
         } catch (_) {
@@ -1623,14 +1740,17 @@ class NgChatController extends ChangeNotifier {
     try {
       if (rt != null) {
         known = gateway.openRequestIdsFor([rt, id]);
-        snapshot = await gateway.call('session.resume', {
-          'session_id': id,
-          'source': 'desktop',
-          'omit_messages': true,
-          'defer_history': true,
-          // The canonical resume model forbids inline_images (#291).
-          if (!canonical) 'inline_images': false,
-        });
+        snapshot = await gateway.call(
+          'session.resume',
+          _scoped({
+            'session_id': id,
+            'source': 'desktop',
+            'omit_messages': true,
+            'defer_history': true,
+            // The canonical resume model forbids inline_images (#291).
+            if (!canonical) 'inline_images': false,
+          }),
+        );
       }
       if (_disposed) return;
       final nowRunning = snapshot == null
@@ -2157,26 +2277,36 @@ class NgChatController extends ChangeNotifier {
       final pickedEffort = _pickedEffort;
       late final Map<String, dynamic> result;
       try {
-        result = await gateway.call('session.create', {
-          // CanonicalCreateParams.source refuses the legacy 'desktop' hint on
-          // the authority route; 'gui' is the canonical graphical surface (#291).
-          'source': gateway.sessionAuthority ? 'gui' : 'desktop',
-          if (cwd != null && cwd.trim().isNotEmpty) ...{
-            'cwd': cwd,
-            // Current legacy + canonical contracts declare this. Older closed
-            // validators reject before the handler: fail visibly, NEVER retry
-            // without provenance and silently run in a named profile's default.
-            'cwd_explicit': true,
-          },
-          'model': ?pickedModel,
-          if (pickedProvider != null && pickedProvider.trim().isNotEmpty)
-            'provider': pickedProvider,
-          if (pickedEffort != null)
-            if (gateway.sessionAuthority)
-              'reasoning': pickedEffort
-            else
-              'reasoning_effort': pickedEffort,
-        });
+        result = await gateway.call(
+          'session.create',
+          _scoped({
+            // CanonicalCreateParams.source refuses the legacy 'desktop' hint on
+            // the authority route; 'gui' is the canonical graphical surface (#291).
+            'source': gateway.sessionAuthority ? 'gui' : 'desktop',
+            if (cwd != null && cwd.trim().isNotEmpty) ...{
+              'cwd': cwd,
+              // Current legacy + canonical contracts declare this. Older closed
+              // validators reject before the handler: fail visibly, NEVER retry
+              // without provenance and silently run in a named profile's default.
+              'cwd_explicit': true,
+            },
+            'model': ?pickedModel,
+            if (pickedProvider != null && pickedProvider.trim().isNotEmpty)
+              'provider': pickedProvider,
+            if (pickedEffort != null)
+              if (gateway.sessionAuthority)
+                'reasoning': pickedEffort
+              else
+                'reasoning_effort': pickedEffort,
+            // A bot chat is the canonical hidden "Bot Chat" on the bot's own
+            // profile, adopting that profile's model and tools.
+            if (sessionProfile != null) ...{
+              'title': 'Bot Chat',
+              'hidden': true,
+              'follow_profile_config': true,
+            },
+          }),
+        );
       } on JsonRpcError catch (error) {
         // Only pre-handler validation/method refusals prove no create ran.
         // An internal RPC error may have happened after a session was minted.
@@ -2474,10 +2604,10 @@ class NgChatController extends ChangeNotifier {
         trimmed,
       ].where((part) => part.trim().isNotEmpty).join('\n\n');
       _clearRetainedModelMutation();
-      final result = await _submitPromptWithCompatibility({
-        'session_id': runtimeId,
-        'text': prompt,
-      }, submissionId: effectiveSubmissionId);
+      final result = await _submitPromptWithCompatibility(
+        _scoped({'session_id': runtimeId, 'text': prompt}),
+        submissionId: effectiveSubmissionId,
+      );
       item.pending = false;
       // A canonical receipt names the execution its admission started.
       _adoptExecutionGeneration(result['execution_generation']);

@@ -25,7 +25,6 @@ import 'scheduled_page.dart';
 import 'sessions_sidebar.dart';
 import 'settings_page.dart';
 import 'slash_suggestions.dart';
-import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
 class NgMainPage extends StatelessWidget {
@@ -49,6 +48,7 @@ class _NgMainPageState extends State<_NgMainContent>
   NgSessionsModel? _sessions;
   NgBotsModel? _bots;
   NgChatController? _chat;
+  NgSidebarTab _sidebarTab = NgSidebarTab.sessions;
   bool _foreground = true;
   NextGenGateway? _notificationGateway;
   Object? _notificationMutation;
@@ -171,19 +171,29 @@ class _NgMainPageState extends State<_NgMainContent>
     }
   }
 
+  static String _cacheKey(String id, String? profile) {
+    final p = profile?.trim();
+    return p == null || p.isEmpty ? id : '$p\u0000$id';
+  }
+
   void _openId(
     String? id,
     String title, {
     bool initial = false,
     String? workingDirectory,
+    String? sessionProfile,
+    NgChatIdentity? identity,
   }) {
     final scope = NgScope.of(context);
     final old = _chat;
 
-    // Try the LRU cache first: reuse the parsed transcript, just resync.
+    // Try the LRU cache first: reuse the parsed transcript, just resync. A bot
+    // chat on another profile is a different chat from an ordinary one with
+    // the same stored id, so the profile is part of the key.
+    final cacheKey = id == null ? null : _cacheKey(id, sessionProfile);
     NgChatController? cached;
-    if (id != null && _cache.containsKey(id)) {
-      cached = _cache.remove(id);
+    if (cacheKey != null && _cache.containsKey(cacheKey)) {
+      cached = _cache.remove(cacheKey);
     }
 
     late final NgChatController chat;
@@ -195,19 +205,27 @@ class _NgMainPageState extends State<_NgMainContent>
       chat = NgChatController(
         scope.gateway,
         sessionId: id,
+        sessionProfile: sessionProfile,
+        identity: identity,
         title: title,
         workingDirectory: workingDirectory,
         onCreated: (stored) {
-          unawaited(
-            NextGenPreferences.setLastSession(
-              scope.prefs,
-              scope.connection.id,
-              stored,
-            ),
-          );
+          // The saved last session is the connection's own chat. A bot chat
+          // lives on another profile and must never restore there.
+          if (sessionProfile == null) {
+            unawaited(
+              NextGenPreferences.setLastSession(
+                scope.prefs,
+                scope.connection.id,
+                stored,
+              ),
+            );
+          }
           if (identical(_chat, chat)) _sessions?.currentId = stored;
           // Move into the cache under the new stored id.
-          if (stored.isNotEmpty) _cache[stored] = chat;
+          if (stored.isNotEmpty) {
+            _cache[_cacheKey(stored, sessionProfile)] = chat;
+          }
           unawaited(_sessions?.refresh());
         },
         onTurnFinished: () => _turnFinished(chat),
@@ -233,7 +251,7 @@ class _NgMainPageState extends State<_NgMainContent>
     if (old != null && !identical(old, chat)) {
       final oldId = old.storedId;
       if (oldId != null && oldId.isNotEmpty) {
-        _cache[oldId] = old;
+        _cache[_cacheKey(oldId, old.sessionProfile)] = old;
         // Evict oldest parked controllers beyond the limit.
         while (_cache.length > _maxCached) {
           final evictKey = _cache.keys.first;
@@ -251,9 +269,17 @@ class _NgMainPageState extends State<_NgMainContent>
     } else {
       unawaited(chat.open());
     }
-    unawaited(
-      NextGenPreferences.setLastSession(scope.prefs, scope.connection.id, id),
-    );
+    // Only an ordinary chat belongs on the connection's own profile when the
+    // app reopens; restoring a bot's stored id there yields "session not found".
+    if (sessionProfile == null) {
+      unawaited(
+        NextGenPreferences.setLastSession(
+          scope.prefs,
+          scope.connection.id,
+          id,
+        ),
+      );
+    }
   }
 
   // ── Notifications (Kyllene's ChatNotifier) ──────────────────────────
@@ -572,12 +598,25 @@ class _NgMainPageState extends State<_NgMainContent>
 
   void _openBot(NgBot bot) {
     _scaffold.currentState?.closeDrawer();
+    final identity = NgChatIdentity(
+      profileName: bot.name,
+      botName: bot.title,
+      botDescription: bot.description,
+      avatarBytes: _bots?.avatarBytes(bot.name),
+    );
     final id = bot.sessionId;
     if (id == null || id.isEmpty) {
-      ngToast(context, 'No chat yet for ${bot.title}');
+      // No canonical session yet: open an empty bot chat. Its first send
+      // creates the hidden "Bot Chat" on the bot's own profile.
+      _openId(null, '', sessionProfile: bot.name, identity: identity);
       return;
     }
-    _openId(id, bot.sessionTitle ?? bot.title);
+    _openId(
+      id,
+      bot.sessionTitle ?? bot.title,
+      sessionProfile: bot.name,
+      identity: identity,
+    );
   }
 
   Future<void> _openGroup(NgGroupChat group) async {
@@ -620,6 +659,8 @@ class _NgMainPageState extends State<_NgMainContent>
           onDestination: _go,
           onOpenBot: _openBot,
           onOpenGroup: _openGroup,
+          selectedTab: _sidebarTab,
+          onTabChanged: (tab) => setState(() => _sidebarTab = tab),
         ),
         body: chat == null
             ? const SizedBox.shrink()

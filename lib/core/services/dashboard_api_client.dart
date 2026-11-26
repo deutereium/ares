@@ -485,12 +485,16 @@ class DashboardApiClient extends ApiClient {
     int? limit,
     int offset = 0,
     bool latest = false,
+    String? profile,
   }) async {
     final res = await dashboard.apiRequest(
       'GET',
       'sessions/${Uri.encodeComponent(sessionId)}/messages',
       queryParameters: {
         ..._profileQuery,
+        // An explicit bot profile wins over the connection's own profile.
+        if (profile != null && profile.trim().isNotEmpty)
+          'profile': profile.trim(),
         if (limit != null) 'limit': '${limit.clamp(0, 500)}',
         if (offset != 0) 'offset': '$offset',
         if (latest || limit == null) 'order': 'latest',

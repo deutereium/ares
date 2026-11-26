@@ -43,6 +43,7 @@ class _PagedApi extends DashboardApiClient {
     int? limit,
     int offset = 0,
     bool latest = false,
+    String? profile,
   }) async {
     calls.add((limit, offset));
     final end = (rows.length - offset).clamp(0, rows.length);
@@ -65,6 +66,7 @@ class _HeldPagedApi extends _PagedApi {
     int? limit,
     int offset = 0,
     bool latest = false,
+    String? profile,
   }) async {
     final gate = gates[calls.length];
     if (gate != null) await gate.future;
@@ -73,6 +75,7 @@ class _HeldPagedApi extends _PagedApi {
       limit: limit,
       offset: offset,
       latest: latest,
+      profile: profile,
     );
   }
 }
