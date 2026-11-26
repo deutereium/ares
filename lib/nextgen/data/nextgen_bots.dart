@@ -152,7 +152,9 @@ class NgBotsModel extends ChangeNotifier {
 
   void startPolling() {
     if (_poll != null) return;
-    unawaited(refresh());
+    // A pane calls this from initState. Let the current build finish before
+    // refresh() flips loading and notifies listeners.
+    unawaited(Future<void>.microtask(refresh));
     _poll = Timer.periodic(const Duration(seconds: 5), (_) {
       unawaited(refresh());
     });

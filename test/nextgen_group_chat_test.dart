@@ -216,7 +216,7 @@ void main() {
     expect(controller.error, isNotNull);
   });
 
-  testWidgets('the page shows messages and a composer', () async {
+  testWidgets('the page shows messages and a composer', (tester) async {
     final gateway = _Gateway();
     final controller = NgGroupChatController(
       gateway: gateway,
