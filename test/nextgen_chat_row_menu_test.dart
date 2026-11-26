@@ -18,6 +18,8 @@ import 'package:hermes_android/nextgen/ui/nextgen_scope.dart';
 import 'package:hermes_android/nextgen/ui/sessions_sidebar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+final double _now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+
 Session _row(
   String id,
   String title, {
