@@ -118,7 +118,7 @@ jobs:
           if [ "${{ steps.analyze.outcome }}" != "success" ]; then
             echo "### Static analysis failed" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat analyze_output.txt >> $GITHUB_STEP_SUMMARY
+            tail -c 60000 analyze_output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           else
@@ -129,7 +129,7 @@ jobs:
           if [ "${{ steps.test.outcome }}" != "success" ]; then
             echo "### Tests failed" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat test_output.txt >> $GITHUB_STEP_SUMMARY
+            tail -c 60000 test_output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
             echo "All tests: passing" >> $GITHUB_STEP_SUMMARY
@@ -138,7 +138,7 @@ jobs:
           if [ "${{ steps.play_test.outcome }}" != "success" ]; then
             echo "### Play distribution tests failed" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat play_test_output.txt >> $GITHUB_STEP_SUMMARY
+            tail -c 60000 play_test_output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
