@@ -15,7 +15,6 @@ import '../data/nextgen_bots.dart';
 import '../data/chat_controller.dart';
 import '../data/group_chat_controller.dart';
 import '../nextgen_preferences.dart';
-import 'bots_pane.dart';
 import 'capabilities_page.dart';
 import 'chat_view.dart';
 import 'group_chat_page.dart';
