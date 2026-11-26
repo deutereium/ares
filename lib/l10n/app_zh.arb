@@ -1237,7 +1237,13 @@
   "ng_choose_project": "选择项目",
   "ng_project_cwd_fallback": "项目文件夹不可用，因此此聊天在 {path} 中运行。",
   "ng_project_create_uncertain": "网关可能已创建此聊天，但未确认。开始新聊天前请检查聊天列表；此请求不会自动重试。",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "我们要做些什么？",
   "ng_ask_hermes_anything_it_can_run": "向 Hermes 提问。它可以运行工具、浏览网页，还能处理服务器上的文件。",
   "ng_working_2": "正在处理 · {frame}",
@@ -1688,5 +1694,14 @@
   "ng_slash_suggestions_label": "命令建议",
   "ng_slash_suggestions_empty": "没有匹配的命令",
   "ng_slash_suggestions_loading": "正在加载命令…",
-  "ng_slash_suggestions_skill": "技能"
+  "ng_slash_suggestions_skill": "技能",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

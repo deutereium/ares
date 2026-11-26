@@ -1237,7 +1237,13 @@
   "ng_choose_project": "プロジェクトを選択",
   "ng_project_cwd_fallback": "プロジェクトフォルダーを利用できなかったため、このチャットは {path} で実行されます。",
   "ng_project_create_uncertain": "ゲートウェイがチャットを作成した可能性がありますが、確認できませんでした。別のチャットを開始する前にチャット一覧を確認してください。このリクエストは自動的に再試行されません。",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "何に取り組みますか？",
   "ng_ask_hermes_anything_it_can_run": "Hermesに何でも聞いてください。ツールの実行やウェブの閲覧、サーバー上のファイル操作ができます。",
   "ng_working_2": "作業中 · {frame}",
@@ -1688,5 +1694,14 @@
   "ng_slash_suggestions_label": "コマンドの候補",
   "ng_slash_suggestions_empty": "一致するコマンドはありません",
   "ng_slash_suggestions_loading": "コマンドを読み込み中…",
-  "ng_slash_suggestions_skill": "スキル"
+  "ng_slash_suggestions_skill": "スキル",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

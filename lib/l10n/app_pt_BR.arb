@@ -1237,7 +1237,13 @@
   "ng_choose_project": "Escolher um projeto",
   "ng_project_cwd_fallback": "A pasta do projeto não estava disponível, então esta conversa é executada em {path}.",
   "ng_project_create_uncertain": "O gateway pode ter criado esta conversa, mas não a confirmou. Verifique as conversas antes de iniciar outra; esta solicitação não será repetida automaticamente.",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "No que vamos trabalhar?",
   "ng_ask_hermes_anything_it_can_run": "Pergunte qualquer coisa ao Hermes. Ele pode usar ferramentas, navegar e trabalhar nos seus arquivos no servidor.",
   "ng_working_2": "Trabalhando · {frame}",
@@ -1688,5 +1694,14 @@
   "ng_slash_suggestions_label": "Sugestões de comandos",
   "ng_slash_suggestions_empty": "Nenhum comando correspondente",
   "ng_slash_suggestions_loading": "Carregando comandos…",
-  "ng_slash_suggestions_skill": "Habilidade"
+  "ng_slash_suggestions_skill": "Habilidade",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

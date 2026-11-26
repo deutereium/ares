@@ -1390,7 +1390,13 @@
   "ng_choose_project": "Вибрати проєкт",
   "ng_project_cwd_fallback": "Папка проєкту недоступна, тому цей чат працює в {path}.",
   "ng_project_create_uncertain": "Шлюз міг створити цей чат, але не підтвердив це. Перевірте список чатів, перш ніж починати новий. Запит не буде повторено автоматично.",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "Над чим попрацюємо?",
   "ng_ask_hermes_anything_it_can_run": "Запитайте Hermes про що завгодно. Він може запускати інструменти, переглядати вебсторінки й працювати з файлами на сервері.",
   "ng_working_2": "Працює · {frame}",
@@ -1841,5 +1847,14 @@
   "ng_slash_suggestions_label": "Запропоновані команди",
   "ng_slash_suggestions_empty": "Немає відповідних команд",
   "ng_slash_suggestions_loading": "Завантаження команд…",
-  "ng_slash_suggestions_skill": "Навичка"
+  "ng_slash_suggestions_skill": "Навичка",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

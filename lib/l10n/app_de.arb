@@ -1237,7 +1237,13 @@
   "ng_choose_project": "Projekt auswählen",
   "ng_project_cwd_fallback": "Der Projektordner war nicht verfügbar. Dieser Chat läuft daher in {path}.",
   "ng_project_create_uncertain": "Das Gateway hat diesen Chat möglicherweise erstellt, aber nicht bestätigt. Prüfe die Chats, bevor du einen weiteren startest. Diese Anfrage wird nicht automatisch wiederholt.",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "Woran sollen wir arbeiten?",
   "ng_ask_hermes_anything_it_can_run": "Frag Hermes alles. Es kann Tools ausführen, im Web suchen und mit deinen Dateien auf dem Server arbeiten.",
   "ng_working_2": "Wird bearbeitet · {frame}",
@@ -1688,5 +1694,14 @@
   "ng_slash_suggestions_label": "Befehlsvorschläge",
   "ng_slash_suggestions_empty": "Keine passenden Befehle",
   "ng_slash_suggestions_loading": "Befehle werden geladen…",
-  "ng_slash_suggestions_skill": "Skill"
+  "ng_slash_suggestions_skill": "Skill",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

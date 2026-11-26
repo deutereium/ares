@@ -73,8 +73,20 @@
   "ng_model_switches_next_turn": "Switches to {model} at the next turn.",
   "ng_model_switch_not_connected": "The chat is not ready for a model switch. Reopen it and try again.",
   "ng_gateway_kept_default_model": "The gateway kept {model} for this chat. Pick the model again before sending.",
-  "@ng_model_switches_next_turn": {"placeholders": {"model": {"type": "String"}}},
-  "@ng_gateway_kept_default_model": {"placeholders": {"model": {"type": "String"}}},
+  "@ng_model_switches_next_turn": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "@ng_gateway_kept_default_model": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
   "hands_free_title": "Hands-free",
   "hands_free_start": "Start hands-free",
   "hands_free_stop": "Stop hands-free",
@@ -1697,7 +1709,13 @@
   "ng_choose_project": "Choose a project",
   "ng_project_cwd_fallback": "The project folder wasn't available, so this chat runs in {path}.",
   "ng_project_create_uncertain": "The gateway may have created this chat, but did not confirm it. Check Chats before starting another; this request will not be retried automatically.",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "What should we work on?",
   "ng_ask_hermes_anything_it_can_run": "Ask Hermes anything. It can run tools, browse and work in your files on the server.",
   "ng_working_2": "Working · {frame}",
@@ -2555,24 +2573,57 @@
   "ng_models_custom_endpoint": "Runs on a custom endpoint. Change it on the gateway.",
   "ng_models_context_window": "Context window",
   "ng_models_token_count": "{count} tokens",
-  "@ng_models_token_count": {"placeholders": {"count": {"type": "String"}}},
+  "@ng_models_token_count": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "ng_models_context_override": "Set on the gateway. Auto-detected: {count} tokens.",
-  "@ng_models_context_override": {"placeholders": {"count": {"type": "String"}}},
+  "@ng_models_context_override": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "ng_models_max_output": "Max output",
   "ng_models_input_price": "Input price",
   "ng_models_output_price": "Output price",
   "ng_models_cache_price": "Cached input price",
   "ng_models_per_million": "{price} per 1M tokens",
-  "@ng_models_per_million": {"placeholders": {"price": {"type": "String"}}},
+  "@ng_models_per_million": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "ng_models_price_pair": "{input} in · {output} out per 1M tokens",
-  "@ng_models_price_pair": {"placeholders": {"input": {"type": "String"}, "output": {"type": "String"}}},
+  "@ng_models_price_pair": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
   "ng_models_free": "Free",
   "ng_models_vision": "Vision",
   "ng_models_reasoning": "Reasoning",
   "ng_models_fast": "Fast mode",
   "ng_models_in_use": "In use",
   "ng_models_count": "{count, plural, one{{count} model} other{{count} models}}",
-  "@ng_models_count": {"placeholders": {"count": {"type": "int"}}},
+  "@ng_models_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ng_models_rate_limited": "Rate-limited",
   "ng_models_plan_locked": "Not on your plan",
   "ng_models_unsaved": "Unsaved changes",
@@ -2607,5 +2658,14 @@
   "ng_slash_suggestions_label": "Command suggestions",
   "ng_slash_suggestions_empty": "No matching commands",
   "ng_slash_suggestions_loading": "Loading commands…",
-  "ng_slash_suggestions_skill": "Skill"
+  "ng_slash_suggestions_skill": "Skill",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

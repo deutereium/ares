@@ -11,8 +11,10 @@ import '../../core/services/notification_prefs.dart';
 import '../../core/services/connection_mutation_barrier.dart';
 import '../../core/services/turn_notification_service.dart';
 import '../data/nextgen_gateway.dart';
+import '../data/nextgen_bots.dart';
 import '../data/chat_controller.dart';
 import '../nextgen_preferences.dart';
+import 'bots_pane.dart';
 import 'capabilities_page.dart';
 import 'chat_view.dart';
 import 'insights_page.dart';
@@ -23,6 +25,7 @@ import 'scheduled_page.dart';
 import 'sessions_sidebar.dart';
 import 'settings_page.dart';
 import 'slash_suggestions.dart';
+import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
 class NgMainPage extends StatelessWidget {
@@ -44,6 +47,7 @@ class _NgMainPageState extends State<_NgMainContent>
     with WidgetsBindingObserver {
   final _scaffold = GlobalKey<ScaffoldState>();
   NgSessionsModel? _sessions;
+  NgBotsModel? _bots;
   NgChatController? _chat;
   bool _foreground = true;
   NextGenGateway? _notificationGateway;
@@ -81,6 +85,7 @@ class _NgMainPageState extends State<_NgMainContent>
     }
     _cache.clear();
     _sessions?.dispose();
+    _bots?.dispose();
     super.dispose();
   }
 
@@ -117,6 +122,7 @@ class _NgMainPageState extends State<_NgMainContent>
     final sessions = _sessions;
     if (sessions == null) {
       _sessions = NgSessionsModel(scope);
+      _bots = NgBotsModel(scope);
       unawaited(_sessions!.refresh());
       final last =
           _takeOpenRequest(scope.connection.id) ??
@@ -125,6 +131,7 @@ class _NgMainPageState extends State<_NgMainContent>
       _listenForRequests(scope);
     } else {
       sessions.scope = scope;
+      _bots?.adoptScope(scope);
     }
   }
 
@@ -563,6 +570,29 @@ class _NgMainPageState extends State<_NgMainContent>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
   }
 
+  void _openBot(NgBot bot) {
+    _scaffold.currentState?.closeDrawer();
+    final id = bot.sessionId;
+    if (id == null || id.isEmpty) {
+      ngToast(context, 'No chat yet for ${bot.title}');
+      return;
+    }
+    _openId(id, bot.sessionTitle ?? bot.title);
+  }
+
+  Future<void> _openGroup(NgGroupChat group) async {
+    _scaffold.currentState?.closeDrawer();
+    final bots = _bots;
+    await showNgGroupChatSheet(
+      context,
+      group: group,
+      avatars: {
+        for (final bot in bots?.bots ?? const <NgBot>[])
+          bot.name: bots?.avatarBytes(bot.name),
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = _chat;
@@ -576,14 +606,20 @@ class _NgMainPageState extends State<_NgMainContent>
         drawerEdgeDragWidth: 48,
         onDrawerChanged: (open) {
           _sessions?.drawerOpen = open;
-          if (open) unawaited(_sessions?.refresh());
+          if (open) {
+            unawaited(_sessions?.refresh());
+            unawaited(_bots?.refresh());
+          }
         },
         drawer: NgSessionsSidebar(
           model: _sessions!,
+          bots: _bots!,
           currentSessionId: chat?.storedId,
           onOpen: _open,
           onNewChat: _newChat,
           onDestination: _go,
+          onOpenBot: _openBot,
+          onOpenGroup: _openGroup,
         ),
         body: chat == null
             ? const SizedBox.shrink()

@@ -8334,6 +8334,34 @@ abstract class AppLocalizations {
   /// **'Sessions'**
   String get ng_sessions;
 
+  /// No description provided for @ng_bots.
+  String get ng_bots;
+
+  /// No description provided for @ng_group_chats.
+  String get ng_group_chats;
+
+  /// No description provided for @ng_unassigned.
+  String get ng_unassigned;
+
+  /// No description provided for @ng_no_bots.
+  String get ng_no_bots;
+
+  /// No description provided for @ng_no_group_chats.
+  String get ng_no_group_chats;
+
+  /// No description provided for @ng_search_bots.
+  String get ng_search_bots;
+
+  /// No description provided for @ng_members.
+  String get ng_members;
+
+  /// No description provided for @ng_messages.
+  String get ng_messages;
+
+  /// No description provided for @ng_bot_roster.
+  String get ng_bot_roster;
+
+
   /// No description provided for @ng_tokens.
   ///
   /// In en, this message translates to:

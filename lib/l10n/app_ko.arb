@@ -1237,7 +1237,13 @@
   "ng_choose_project": "프로젝트 선택",
   "ng_project_cwd_fallback": "프로젝트 폴더를 사용할 수 없어 이 채팅은 {path}에서 실행됩니다.",
   "ng_project_create_uncertain": "게이트웨이가 채팅을 만들었을 수 있지만 확인하지 못했습니다. 새 채팅을 시작하기 전에 채팅 목록을 확인하세요. 이 요청은 자동으로 재시도되지 않습니다.",
-  "@ng_project_cwd_fallback": {"placeholders": {"path": {"type": "String"}}},
+  "@ng_project_cwd_fallback": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "ng_what_should_we_work_on": "무엇을 해볼까요?",
   "ng_ask_hermes_anything_it_can_run": "Hermes에 무엇이든 물어보세요. 도구를 실행하고, 웹을 탐색하고, 서버의 파일을 다룰 수 있어요.",
   "ng_working_2": "작업 중 · {frame}",
@@ -1688,5 +1694,14 @@
   "ng_slash_suggestions_label": "명령 제안",
   "ng_slash_suggestions_empty": "일치하는 명령이 없습니다",
   "ng_slash_suggestions_loading": "명령을 불러오는 중…",
-  "ng_slash_suggestions_skill": "스킬"
+  "ng_slash_suggestions_skill": "스킬",
+  "ng_bots": "Bots",
+  "ng_group_chats": "Group chats",
+  "ng_unassigned": "Unassigned",
+  "ng_no_bots": "No bots yet",
+  "ng_no_group_chats": "No group chats yet",
+  "ng_search_bots": "Search bots and group chats",
+  "ng_members": "Members",
+  "ng_messages": "Messages",
+  "ng_bot_roster": "Bots"
 }

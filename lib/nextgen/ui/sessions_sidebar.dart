@@ -15,10 +15,15 @@ import '../data/seen_chats.dart';
 import '../theme/nextgen_theme.dart';
 import 'nextgen_scope.dart';
 import 'profile_switcher.dart';
+import 'bots_pane.dart';
 import 'widgets.dart';
+import '../data/nextgen_bots.dart';
 import '../nextgen_l10n.dart';
 
 enum NgSidebarFilter { all, running, needsYou, crons }
+
+/// The two Desktop-style sidebar surfaces. Group chats live under Bots.
+enum NgSidebarTab { sessions, bots }
 
 /// How a chat row is highlighted, most urgent first: orange while the agent
 /// waits on a question or approval, green when it finished with a reply
@@ -68,8 +73,14 @@ class NgSessionsModel extends ChangeNotifier {
   /// filling share one policy, including badges and attention summaries.
   bool includesChat(Session session) =>
       !isCronSession(session) &&
+      !_isGroupChatSession(session) &&
       (query.isNotEmpty ||
           !isInternalListingSession(session, showSubagents: _showSubagents));
+
+  /// Group chat plumbing belongs to the Bots tab, never Sessions.
+  static bool _isGroupChatSession(Session session) =>
+      session.source.toLowerCase().contains('group') ||
+      session.title.trim().toLowerCase().startsWith('group:');
 
   void browseCrons(bool value) {
     if (_browsingCrons == value) return;
@@ -455,6 +466,9 @@ class NgSessionsSidebar extends StatefulWidget {
     required this.onOpen,
     required this.onNewChat,
     required this.onDestination,
+    this.bots,
+    this.onOpenBot,
+    this.onOpenGroup,
   });
 
   final NgSessionsModel model;
@@ -462,6 +476,9 @@ class NgSessionsSidebar extends StatefulWidget {
   final ValueChanged<Session> onOpen;
   final VoidCallback onNewChat;
   final ValueChanged<NgDestination> onDestination;
+  final NgBotsModel? bots;
+  final ValueChanged<NgBot>? onOpenBot;
+  final ValueChanged<NgGroupChat>? onOpenGroup;
 
   @override
   State<NgSessionsSidebar> createState() => _NgSessionsSidebarState();
@@ -472,10 +489,13 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   final _searchFocus = FocusNode();
   final _scroll = ScrollController();
   NgSidebarFilter _filter = NgSidebarFilter.all;
+  NgSidebarTab _tab = NgSidebarTab.sessions;
+  late final NgBotsModel _bots;
 
   @override
   void initState() {
     super.initState();
+    _bots = widget.bots ?? NgBotsModel(NgScope.of(context));
     _search.text = widget.model.query;
     // The model and its server cursor outlive the drawer. Reopening it must
     // not show All while still paging the unfiltered Crons authority.
@@ -492,6 +512,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
     _search.dispose();
     _searchFocus.dispose();
     _scroll.dispose();
+    if (widget.bots == null) _bots.dispose();
     super.dispose();
   }
 
@@ -679,7 +700,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
       shape: const RoundedRectangleBorder(),
       child: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge([widget.model, scope.gateway]),
+          listenable: Listenable.merge([widget.model, _bots, scope.gateway]),
           builder: (context, _) {
             final needsYou = scope.gateway.needsYou;
             final all = widget.model.sessions;
@@ -712,7 +733,11 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     controller: _search,
                     focusNode: _searchFocus,
                     onChanged: (value) {
-                      widget.model.search(value);
+                      if (_tab == NgSidebarTab.bots) {
+                        _bots.query = value;
+                      } else {
+                        widget.model.search(value);
+                      }
                       setState(() {});
                     },
                     style: NgType.body.copyWith(color: c.text),
@@ -736,12 +761,18 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                               ),
                               onPressed: () {
                                 _search.clear();
-                                widget.model.clearSearch();
+                                if (_tab == NgSidebarTab.bots) {
+                                  _bots.query = '';
+                                } else {
+                                  widget.model.clearSearch();
+                                }
                                 _searchFocus.requestFocus();
                                 setState(() {});
                               },
                             ),
-                      hintText: ngL.ng_search_chats,
+                      hintText: _tab == NgSidebarTab.bots
+                          ? ngL.ng_search_bots
+                          : ngL.ng_search_chats,
                       hintStyle: NgType.body.copyWith(color: c.textMuted),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(NgRadii.full),
@@ -750,6 +781,33 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: NgSegmented<NgSidebarTab>(
+                    key: const Key('ng-sidebar-tabs'),
+                    values: NgSidebarTab.values,
+                    selected: _tab,
+                    labelOf: (tab) => switch (tab) {
+                      NgSidebarTab.sessions => ngL.ng_sessions,
+                      NgSidebarTab.bots => ngL.ng_bots,
+                    },
+                    onChanged: (tab) {
+                      setState(() => _tab = tab);
+                      if (tab == NgSidebarTab.bots) {
+                        _bots.query = _search.text;
+                      }
+                    },
+                  ),
+                ),
+                if (_tab == NgSidebarTab.bots)
+                  Expanded(
+                    child: NgBotsPane(
+                      model: _bots,
+                      onOpenBot: widget.onOpenBot ?? (_) {},
+                      onOpenGroup: widget.onOpenGroup ?? (_) {},
+                    ),
+                  )
+                else
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: widget.model.refresh,
