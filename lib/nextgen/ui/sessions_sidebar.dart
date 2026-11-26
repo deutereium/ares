@@ -14,6 +14,7 @@ import '../../core/utils/session_sources.dart';
 import '../data/seen_chats.dart';
 import '../theme/nextgen_theme.dart';
 import 'nextgen_scope.dart';
+import 'profile_switcher.dart';
 import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
@@ -714,6 +715,57 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+                  child: Material(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(NgRadii.md),
+                    child: InkWell(
+                      key: const Key('ng-sidebar-profile-switch'),
+                      borderRadius: BorderRadius.circular(NgRadii.md),
+                      onTap: () => showNgProfileSwitcher(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 18,
+                              color: c.accentText,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ngL.switch_profile,
+                                    style: NgType.label.copyWith(color: c.text),
+                                  ),
+                                  Text(
+                                    scope.connection.gatewayProfile ??
+                                        ngL.ng_server_default,
+                                    style: NgType.caption.copyWith(
+                                      color: c.text3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.unfold_more,
+                              size: 16,
+                              color: c.text3,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: widget.model.refresh,
@@ -807,6 +859,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                   ),
                 ),
                 _footer(c, scope),
+                _backendStatus(c, scope),
               ],
             );
           },
@@ -1142,6 +1195,42 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             onPressed: widget.onNewChat,
             icon: const Icon(Icons.edit_square, size: 18),
             label: Text(ngL.ng_new_chat),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _backendStatus(NgColors c, NgScope scope) {
+    final state = scope.gateway.state;
+    final tone = state.isConnected ? c.success : c.warning;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.stroke)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: Row(
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${ngL.ng_agent_gateway}: ${state.label}',
+            style: NgType.caption.copyWith(color: c.text2),
+          ),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              scope.gateway.url.display,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: NgType.caption.copyWith(color: c.text3),
+            ),
           ),
         ],
       ),
