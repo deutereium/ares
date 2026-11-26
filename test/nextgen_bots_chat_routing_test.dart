@@ -15,6 +15,7 @@ import 'package:hermes_android/l10n/app_localizations.dart';
 import 'package:hermes_android/nextgen/data/chat_controller.dart';
 import 'package:hermes_android/nextgen/data/nextgen_bots.dart';
 import 'package:hermes_android/nextgen/data/nextgen_gateway.dart';
+import 'package:hermes_android/nextgen/nextgen_preferences.dart';
 import 'package:hermes_android/nextgen/theme/nextgen_theme.dart';
 import 'package:hermes_android/nextgen/ui/avatar.dart';
 import 'package:hermes_android/nextgen/ui/bots_pane.dart';

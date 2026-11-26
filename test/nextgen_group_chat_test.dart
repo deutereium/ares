@@ -1,7 +1,6 @@
 // Interactive groups: hosted rooms read their log and send through
 // groups.send; mirrored Desktop rooms prompt member profiles and show replies
 // in a full-screen chat page with a composer.
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -12,6 +11,7 @@ import 'package:hermes_android/core/services/dashboard_api_client.dart';
 import 'package:hermes_android/nextgen/data/group_chat_controller.dart';
 import 'package:hermes_android/nextgen/data/nextgen_bots.dart';
 import 'package:hermes_android/nextgen/data/nextgen_gateway.dart';
+import 'package:hermes_android/nextgen/nextgen_preferences.dart';
 import 'package:hermes_android/nextgen/theme/nextgen_theme.dart';
 import 'package:hermes_android/nextgen/ui/group_chat_page.dart';
 
