@@ -1,4 +1,3 @@
-import '../models/connection.dart';
 import 'connection_manager.dart';
 
 /// Persists a profile choice on an existing saved connection.
