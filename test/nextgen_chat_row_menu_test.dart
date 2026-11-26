@@ -18,8 +18,6 @@ import 'package:hermes_android/nextgen/ui/nextgen_scope.dart';
 import 'package:hermes_android/nextgen/ui/sessions_sidebar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final double _now = DateTime.now().millisecondsSinceEpoch / 1000.0;
-
 Session _row(
   String id,
   String title, {
@@ -36,7 +34,7 @@ Session _row(
   isActive: active,
   preview: '',
   startedAt: 1000,
-  lastActive: _now - ago,
+  lastActive: DateTime.now().millisecondsSinceEpoch / 1000.0 - ago,
   pinned: pinned,
 );
 
@@ -47,7 +45,7 @@ List<Session> _rows() => [
   _row('a', 'Alpha'),
   _row('b', 'Beta', pinned: true),
   _row('u', 'Unread one', ago: 120),
-  _row('run', 'Running job', active: true, ago: 5),
+  _row('run', 'Running job', active: true, ago: 299),
   _row('daily', 'Daily report', source: 'cron'),
 ];
 
@@ -494,7 +492,7 @@ void main() {
           ('ng-session-a', 'Alpha', '5m'),
           ('ng-session-b', 'Beta', '5m'),
           ('ng-session-u-finished', 'Unread one', '2m'),
-          ('ng-session-run', 'Running job', '5m'),
+          ('ng-session-run', 'Running job', '4m'),
         ]) ...{
           title: tester.getRect(find.text(title)),
           '$title time': tester.getRect(
