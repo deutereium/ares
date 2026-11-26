@@ -1585,6 +1585,7 @@ class _AssistantBlock extends StatefulWidget {
 class _AssistantBlockState extends State<_AssistantBlock> {
   final Set<int> _openThinking = {};
   final Set<int> _openTools = {};
+  final Map<int, bool> _openActivity = {};
 
   /// Rendered content by source text. Returning the same widget lets Flutter
   /// skip it, so typing, the turn timer and streamed tokens re-parse only
@@ -1751,6 +1752,90 @@ class _AssistantBlockState extends State<_AssistantBlock> {
     if (!set.remove(index)) set.add(index);
   }
 
+  Widget _reasoningRow(
+    NgColors c,
+    int index,
+    NgAssistantPart part, {
+    bool active = false,
+  }) {
+    return _Disclosure(
+      icon: Icons.psychology_outlined,
+      label: active ? ngL.ng_thinking : ngL.ng_thought,
+      open: _openThinking.contains(index),
+      onTap: () => setState(() => _toggle(_openThinking, index)),
+      child: Text(
+        part.text.trim(),
+        style: NgType.bodySmall.copyWith(color: c.text3),
+      ),
+    );
+  }
+
+  Widget _toolRowFor(int index, NgAssistantPart part) {
+    final tool = part.tool!;
+    final busy = tool.running;
+    return _Disclosure(
+      icon: Icons.build_outlined,
+      label: busy
+          ? '${tool.name}${tool.detail == null ? '' : ' · ${tool.detail}'}'
+          : ngL.ng_used(tool.name),
+      busy: busy,
+      open: _openTools.contains(index),
+      onTap: () => setState(() => _toggle(_openTools, index)),
+      child: _ToolRow(tool: tool),
+    );
+  }
+
+  /// One foldable box around a run of thoughts and tool calls. The answer
+  /// text stays outside it, so folding the work never hides the reply.
+  Widget _activityGroup(
+    NgColors c,
+    NgAssistantItem item,
+    int start,
+    List<int> indexes,
+  ) {
+    if (indexes.length == 1) {
+      final i = indexes.first;
+      final part = item.parts[i];
+      if (part.kind == NgPartKind.reasoning) {
+        return _reasoningRow(
+          c,
+          i,
+          part,
+          active: item.open && i == item.parts.length - 1,
+        );
+      }
+      return _toolRowFor(i, part);
+    }
+    final tools = [
+      for (final i in indexes)
+        if (item.parts[i].kind == NgPartKind.tool) item.parts[i].tool!,
+    ];
+    final running = tools.any((t) => t.running);
+    final active = item.open && indexes.last == item.parts.length - 1;
+    final open = _openActivity[start] ?? active;
+    final label = running || active
+        ? ngL.ng_working
+        : tools.isEmpty
+        ? ngL.ng_thought
+        : ngL.ng_used_tools(tools.length);
+    return _Disclosure(
+      icon: running ? Icons.bolt_outlined : Icons.psychology_outlined,
+      label: label,
+      busy: running || active,
+      open: open,
+      onTap: () => setState(() => _openActivity[start] = !open),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final i in indexes)
+            item.parts[i].kind == NgPartKind.reasoning
+                ? _reasoningRow(c, i, item.parts[i])
+                : _toolRowFor(i, item.parts[i]),
+        ],
+      ),
+    );
+  }
+
   /// Thoughts, tool calls and answer chunks in the order the gateway sent
   /// them. Items without ordered parts keep the old grouped layout.
   List<Widget> _orderedContent(NgColors c, NgAssistantItem item) {
@@ -1807,51 +1892,31 @@ class _AssistantBlockState extends State<_AssistantBlock> {
     }
 
     final out = <Widget>[];
-    for (var i = 0; i < parts.length; i++) {
+    var i = 0;
+    while (i < parts.length) {
       final part = parts[i];
-      switch (part.kind) {
-        case NgPartKind.reasoning:
-          final active = item.open && i == parts.length - 1;
+      if (part.kind == NgPartKind.text) {
+        if (part.text.isNotEmpty) {
           out.add(
-            _Disclosure(
-              icon: Icons.psychology_outlined,
-              label: active ? ngL.ng_thinking : ngL.ng_thought,
-              open: _openThinking.contains(i),
-              onTap: () => setState(() => _toggle(_openThinking, i)),
-              child: Text(
-                part.text.trim(),
-                style: NgType.bodySmall.copyWith(color: c.text3),
+            SelectionArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: _content(c, item, textOverride: part.text),
               ),
             ),
           );
-        case NgPartKind.tool:
-          final tool = part.tool!;
-          final busy = tool.running;
-          out.add(
-            _Disclosure(
-              icon: Icons.build_outlined,
-              label: busy
-                  ? '${tool.name}${tool.detail == null ? '' : ' · ${tool.detail}'}'
-                  : ngL.ng_used(tool.name),
-              busy: busy,
-              open: _openTools.contains(i),
-              onTap: () => setState(() => _toggle(_openTools, i)),
-              child: _ToolRow(tool: tool),
-            ),
-          );
-        case NgPartKind.text:
-          if (part.text.isNotEmpty) {
-            out.add(
-              SelectionArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: _content(c, item, textOverride: part.text),
-                ),
-              ),
-            );
-          }
+        }
+        i++;
+        continue;
       }
+      final start = i;
+      final run = <int>[];
+      while (i < parts.length && parts[i].kind != NgPartKind.text) {
+        run.add(i);
+        i++;
+      }
+      out.add(_activityGroup(c, item, start, run));
     }
     return out;
   }
