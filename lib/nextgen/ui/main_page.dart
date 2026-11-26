@@ -13,10 +13,12 @@ import '../../core/services/turn_notification_service.dart';
 import '../data/nextgen_gateway.dart';
 import '../data/nextgen_bots.dart';
 import '../data/chat_controller.dart';
+import '../data/group_chat_controller.dart';
 import '../nextgen_preferences.dart';
 import 'bots_pane.dart';
 import 'capabilities_page.dart';
 import 'chat_view.dart';
+import 'group_chat_page.dart';
 import 'insights_page.dart';
 import 'more_page.dart';
 import 'nextgen_scope.dart';
@@ -619,16 +621,25 @@ class _NgMainPageState extends State<_NgMainContent>
     );
   }
 
-  Future<void> _openGroup(NgGroupChat group) async {
+  void _openGroup(NgGroupChat group) {
     _scaffold.currentState?.closeDrawer();
-    final bots = _bots;
-    await showNgGroupChatSheet(
-      context,
+    final controller = NgGroupChatController(
+      gateway: NgScope.of(context).gateway,
       group: group,
-      avatars: {
-        for (final bot in bots?.bots ?? const <NgBot>[])
-          bot.name: bots?.avatarBytes(bot.name),
-      },
+    );
+    unawaited(controller.load());
+    if (controller.isHosted) controller.startPolling();
+    unawaited(
+      Navigator.of(context)
+          .push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => NgGroupChatPage(controller: controller),
+        ),
+      )
+          .whenComplete(() {
+        controller.stopPolling();
+        controller.dispose();
+      }),
     );
   }
 

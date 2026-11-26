@@ -40,12 +40,16 @@ class NgGroupMessage {
     required this.text,
     required this.atMs,
     required this.isUser,
+    this.pending = false,
+    this.failed = false,
   });
 
   final String author;
   final String text;
   final int atMs;
   final bool isUser;
+  final bool pending;
+  final bool failed;
 }
 
 class NgGroupChat {
@@ -58,6 +62,7 @@ class NgGroupChat {
     required this.messages,
     required this.gatewayRoom,
     this.roomId,
+    this.memberProfiles = const <String, String>{},
   });
 
   final String id;
@@ -68,6 +73,13 @@ class NgGroupChat {
   final List<NgGroupMessage> messages;
   final bool gatewayRoom;
   final String? roomId;
+
+  /// Room handle → gateway profile. Mirrored rooms store one bot profile per
+  /// member; hosted rooms use the `profile` from their roster row.
+  final Map<String, String> memberProfiles;
+
+  /// Compatibility name for callers that only need display handles.
+  List<String> get memberNames => members;
 }
 
 class NgBotsModel extends ChangeNotifier {
@@ -290,20 +302,28 @@ class NgBotsModel extends ChangeNotifier {
         final preview = last == null
             ? ''
             : '${last.isUser ? 'You' : last.author}: ${last.text}';
+        final memberRows = (room['members'] as List? ?? const [])
+            .whereType<Map>()
+            .map(_map)
+            .toList(growable: false);
+        final memberProfiles = <String, String>{
+          for (final m in memberRows)
+            if ((m['name']?.toString() ?? '').isNotEmpty)
+              (m['name']?.toString() ?? ''): (m['profile']?.toString() ??
+                  m['handle']?.toString() ??
+                  m['name']?.toString() ?? ''),
+        };
         out.add(
           NgGroupChat(
             id: key,
             name: room['name']?.toString() ?? key,
             preview: preview,
             lastActiveMs: last?.atMs ?? 0,
-            members: (room['members'] as List? ?? const [])
-                .whereType<Map>()
-                .map((m) => _map(m)['name']?.toString() ?? '')
-                .where((s) => s.isNotEmpty)
-                .toList(growable: false),
+            members: memberProfiles.keys.toList(growable: false),
             messages: messages,
             gatewayRoom: false,
             roomId: room['roomId']?.toString(),
+            memberProfiles: memberProfiles,
           ),
         );
       }
@@ -317,19 +337,29 @@ class NgBotsModel extends ChangeNotifier {
     final event = _map(room['event'] ?? room['claim_event']);
     final payload = _map(event['payload']);
     final text = payload['text']?.toString() ?? '';
+    final memberRows = (room['members'] as List? ?? const [])
+        .whereType<Map>()
+        .map(_map)
+        .toList(growable: false);
+    final memberProfiles = <String, String>{
+      for (final m in memberRows)
+        if ((m['handle']?.toString() ?? m['profile']?.toString() ?? '').isNotEmpty)
+          (m['handle']?.toString() ?? m['profile']?.toString() ?? ''):
+              (m['profile']?.toString() ??
+                  m['display_name']?.toString() ??
+                  m['handle']?.toString() ??
+                  ''),
+    };
     return NgGroupChat(
       id: 'canonical:$id',
       name: room['name']?.toString() ?? id,
       preview: text,
       lastActiveMs: _seconds(room['updated_at']),
-      members: (room['members'] as List? ?? const [])
-          .whereType<Map>()
-          .map((m) => _map(m)['handle']?.toString() ?? _map(m)['profile']?.toString() ?? '')
-          .where((s) => s.isNotEmpty)
-          .toList(growable: false),
+      members: memberProfiles.keys.toList(growable: false),
       messages: const [],
       gatewayRoom: true,
       roomId: id,
+      memberProfiles: memberProfiles,
     );
   }
 
