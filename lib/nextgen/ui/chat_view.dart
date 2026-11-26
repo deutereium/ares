@@ -2074,27 +2074,38 @@ class _Disclosure extends StatelessWidget {
                       style: NgType.label.copyWith(color: c.text3),
                     ),
                   ),
-                  Icon(
-                    open ? Icons.expand_less : Icons.expand_more,
-                    size: 16,
-                    color: c.text3,
+                  AnimatedRotation(
+                    turns: open ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOutCubic,
+                    child: Icon(
+                      Icons.expand_more,
+                      size: 16,
+                      color: c.text3,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          if (open)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(NgRadii.md),
-                border: Border.all(color: c.stroke),
-              ),
-              child: child,
-            ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeInOutCubic,
+            alignment: Alignment.topLeft,
+            child: open
+                ? Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(NgRadii.md),
+                      border: Border.all(color: c.stroke),
+                    ),
+                    child: child,
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
     );

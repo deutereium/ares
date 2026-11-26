@@ -18,6 +18,7 @@ import 'chat_view.dart';
 import 'insights_page.dart';
 import 'more_page.dart';
 import 'nextgen_scope.dart';
+import 'profile_switcher.dart';
 import 'scheduled_page.dart';
 import 'sessions_sidebar.dart';
 import 'settings_page.dart';
@@ -106,6 +107,7 @@ class _NgMainPageState extends State<_NgMainContent>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final scope = NgScope.of(context);
+    unawaited(warmNgProfiles(scope));
     if (!identical(_notificationGateway, scope.gateway)) {
       _notificationGateway = scope.gateway;
       _notificationMutation = ConnectionMutationBarrier.capture(

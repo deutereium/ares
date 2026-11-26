@@ -49,6 +49,7 @@ class NgSessionsModel extends ChangeNotifier {
       return;
     }
     _generation++;
+    _activeExpiry?.cancel();
     _scope = value;
     _seen = null;
     _showSubagents = null;
@@ -86,6 +87,7 @@ class NgSessionsModel extends ChangeNotifier {
 
   StreamSubscription<dynamic>? _changes;
   Timer? _changedDebounce;
+  Timer? _activeExpiry;
 
   /// When true (app backgrounded), socket-driven refreshes are suppressed.
   bool paused = false;
@@ -111,6 +113,36 @@ class NgSessionsModel extends ChangeNotifier {
     });
   }
 
+  /// The gateway's `is_active` is a five-minute liveness window, not a live
+  /// turn flag. Without a timestamp check a finished chat keeps its spinner
+  /// until some unrelated event happens to refresh the list.
+  bool isRunning(Session s) {
+    if (!s.isActive || s.endedAt != null) return false;
+    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    return now - s.lastActive < kSessionActiveWindowSeconds;
+  }
+
+  /// Rebuild the drawer when the soonest liveness window ends, so a spinner
+  /// disappears on its own instead of waiting for another socket event.
+  void _scheduleActiveExpiry() {
+    _activeExpiry?.cancel();
+    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    var soonest = double.infinity;
+    for (final s in sessions) {
+      if (!s.isActive || s.endedAt != null) continue;
+      final left = kSessionActiveWindowSeconds - (now - s.lastActive);
+      if (left > 0 && left < soonest) soonest = left;
+    }
+    if (!soonest.isFinite) return;
+    _activeExpiry = Timer(
+      Duration(seconds: soonest.ceil() + 1),
+      () {
+        notifyListeners();
+        _scheduleActiveExpiry();
+      },
+    );
+  }
+
   /// Whether [s] has progress the user hasn't seen (Kyllene's unread mark).
   bool isUnread(Session s) => s.id != currentId && seen.chats.isUnread(s);
 
@@ -120,7 +152,7 @@ class NgSessionsModel extends ChangeNotifier {
       return NgChatAttention.waiting;
     }
     if (!isUnread(s)) return NgChatAttention.none;
-    return s.isActive ? NgChatAttention.updates : NgChatAttention.finished;
+    return isRunning(s) ? NgChatAttention.updates : NgChatAttention.finished;
   }
 
   /// Chats besides the one on screen with something to see, for the badge.
@@ -299,6 +331,7 @@ class NgSessionsModel extends ChangeNotifier {
       if (generation == _generation) {
         loading = false;
         notifyListeners();
+        _scheduleActiveExpiry();
       }
     }
   }
@@ -340,6 +373,7 @@ class NgSessionsModel extends ChangeNotifier {
       if (generation == _generation) {
         loading = false;
         notifyListeners();
+        _scheduleActiveExpiry();
       }
     }
   }
@@ -375,6 +409,7 @@ class NgSessionsModel extends ChangeNotifier {
     _refreshPending = false;
     _debounce?.cancel();
     _changedDebounce?.cancel();
+    _activeExpiry?.cancel();
     _changes?.cancel();
     super.dispose();
   }
@@ -652,7 +687,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             final filtered = switch (_filter) {
               NgSidebarFilter.all => chats,
               NgSidebarFilter.running =>
-                chats.where((s) => s.isActive).toList(),
+                chats.where(isRunning).toList(),
               NgSidebarFilter.needsYou =>
                 chats
                     .where(
@@ -987,7 +1022,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                             color: c.warning,
                           ),
                         )
-                      else if (s.isActive)
+                      else if (widget.model.isRunning(s))
                         Padding(
                           padding: const EdgeInsets.only(right: 10),
                           child: SizedBox(

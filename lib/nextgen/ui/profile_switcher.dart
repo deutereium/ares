@@ -10,6 +10,39 @@ import '../theme/nextgen_theme.dart';
 import 'nextgen_scope.dart';
 import 'widgets.dart';
 
+const _profileCacheTtl = Duration(seconds: 60);
+
+class _CachedProfiles {
+  _CachedProfiles(this.profiles, this.fetchedAt);
+  final List<String> profiles;
+  final DateTime fetchedAt;
+}
+
+final Map<String, _CachedProfiles> _profileCache = {};
+
+String _profileCacheKey(NgScope scope) =>
+    '${scope.connection.id}|${scope.gateway.url.display}';
+
+/// Profile lists change rarely. Keep the last answer per gateway so opening
+/// the switcher does not spend two seconds on a round trip every time.
+Future<List<String>> ngProfiles(NgScope scope) async {
+  final key = _profileCacheKey(scope);
+  final hit = _profileCache[key];
+  if (hit != null && DateTime.now().difference(hit.fetchedAt) < _profileCacheTtl) {
+    return hit.profiles;
+  }
+  final profiles = await scope.gateway.api.listProfiles();
+  _profileCache[key] = _CachedProfiles(profiles, DateTime.now());
+  return profiles;
+}
+
+/// Best-effort warm-up so the first switch tap is usually instant too.
+Future<void> warmNgProfiles(NgScope scope) async {
+  try {
+    await ngProfiles(scope);
+  } catch (_) {}
+}
+
 class _ProfileChoice {
   const _ProfileChoice(this.name);
   final String? name;
@@ -22,7 +55,7 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
   final connection = scope.connection;
   List<String> profiles;
   try {
-    profiles = await scope.gateway.api.listProfiles();
+    profiles = await ngProfiles(scope);
   } catch (e) {
     if (context.mounted) ngToast(context, '$e');
     return false;
