@@ -2694,5 +2694,6 @@
   "ng_chats_in_sidebar": "Chats in sidebar",
   "ng_how_many_chats_the_sidebar_lists_before_load_more": "How many chats the sidebar lists before Load more.",
   "ng_fewer_chats": "Fewer chats",
-  "ng_more_chats": "More chats"
+  "ng_more_chats": "More chats",
+  "ng_destinations": "Destinations"
 }

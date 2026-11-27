@@ -1019,7 +1019,6 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                         controller: _scroll,
                         padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
                         children: [
-                          _tiles(c),
                           const SizedBox(height: 8),
                           _filters(
                             c,
@@ -1188,76 +1187,6 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
           tab(NgSidebarTab.bots, ngL.ng_bots),
         ],
       ),
-    );
-  }
-
-  Widget _tiles(NgColors c) {
-    Widget tile(IconData icon, String label, NgDestination d) => Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Material(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(NgRadii.md),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(NgRadii.md),
-            onTap: () => widget.onDestination(d),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Column(
-                children: [
-                  Icon(icon, size: 20, color: c.text2),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: NgType.caption.copyWith(color: c.text2),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    return Column(
-      children: [
-        Row(
-          children: [
-            tile(Icons.schedule, ngL.ng_scheduled, NgDestination.scheduled),
-            tile(
-              Icons.view_kanban_outlined,
-              ngL.ng_kanban,
-              NgDestination.kanban,
-            ),
-            tile(
-              Icons.insights_outlined,
-              ngL.ng_insights,
-              NgDestination.insights,
-            ),
-            tile(
-              Icons.archive_outlined,
-              ngL.ng_archived,
-              NgDestination.archived,
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            tile(
-              Icons.extension_outlined,
-              ngL.ng_capabilities,
-              NgDestination.capabilities,
-            ),
-            tile(Icons.apps, ngL.ng_more, NgDestination.more),
-            tile(
-              Icons.settings_outlined,
-              ngL.ng_settings,
-              NgDestination.settings,
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -1638,6 +1567,95 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
     } else if (picked != scope.connection.id) {
       await scope.switchTo(picked);
     }
+  }
+}
+
+/// The right sidebar: destination shortcuts that used to sit above the chat
+/// list. Opened by swiping in from the right edge.
+class NgDestinationsSidebar extends StatelessWidget {
+  const NgDestinationsSidebar({super.key, required this.onDestination});
+
+  final ValueChanged<NgDestination> onDestination;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    Widget row(IconData icon, String label, NgDestination d) => Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(NgRadii.md),
+        child: InkWell(
+          key: Key('ng-destination-${d.name}'),
+          borderRadius: BorderRadius.circular(NgRadii.md),
+          onTap: () => onDestination(d),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: c.accentText),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: NgType.label.copyWith(color: c.text),
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 18, color: c.text3),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return Drawer(
+      backgroundColor: c.sidebar,
+      width: 300,
+      shape: const RoundedRectangleBorder(),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              child: Text(
+                ngL.ng_destinations,
+                style: NgType.heading.copyWith(color: c.text),
+              ),
+            ),
+            row(Icons.schedule, ngL.ng_scheduled, NgDestination.scheduled),
+            row(
+              Icons.view_kanban_outlined,
+              ngL.ng_kanban,
+              NgDestination.kanban,
+            ),
+            row(
+              Icons.insights_outlined,
+              ngL.ng_insights,
+              NgDestination.insights,
+            ),
+            row(
+              Icons.archive_outlined,
+              ngL.ng_archived,
+              NgDestination.archived,
+            ),
+            row(
+              Icons.extension_outlined,
+              ngL.ng_capabilities,
+              NgDestination.capabilities,
+            ),
+            row(Icons.apps, ngL.ng_more, NgDestination.more),
+            row(
+              Icons.settings_outlined,
+              ngL.ng_settings,
+              NgDestination.settings,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

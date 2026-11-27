@@ -6260,4 +6260,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get ng_more_chats => 'Більше чатів';
+
+  @override
+  String get ng_destinations => 'Розділи';
 }

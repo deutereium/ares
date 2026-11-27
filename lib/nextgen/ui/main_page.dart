@@ -576,7 +576,9 @@ class _NgMainPageState extends State<_NgMainContent>
     if (didPop) return;
     final scaffold = _scaffold.currentState;
     if (scaffold == null) return;
-    if (scaffold.isDrawerOpen) {
+    if (scaffold.isEndDrawerOpen) {
+      scaffold.closeEndDrawer();
+    } else if (scaffold.isDrawerOpen) {
       // Back dismisses the open sidebar; it must not leave the app. The
       // drawer's local-history entry is cleared by the close animation.
       scaffold.closeDrawer();
@@ -649,6 +651,7 @@ class _NgMainPageState extends State<_NgMainContent>
   }
 
   void _go(NgDestination d) {
+    _scaffold.currentState?.closeEndDrawer();
     _scaffold.currentState?.closeDrawer();
     final Widget page = switch (d) {
       NgDestination.scheduled => NgScheduledPage(onOpenSession: _open),
@@ -742,6 +745,7 @@ class _NgMainPageState extends State<_NgMainContent>
           selectedTab: _sidebarTab,
           onTabChanged: (tab) => setState(() => _sidebarTab = tab),
         ),
+        endDrawer: NgDestinationsSidebar(onDestination: _go),
         body: chat == null
             ? const SizedBox.shrink()
             : NgChatView(

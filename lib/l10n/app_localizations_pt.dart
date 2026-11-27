@@ -6263,6 +6263,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ng_more_chats => 'Mais chats';
+
+  @override
+  String get ng_destinations => 'Destinos';
 }
 
 /// The translations for Portuguese, as used in Brazil (`pt_BR`).
@@ -12326,4 +12329,7 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get ng_more_chats => 'Mais chats';
+
+  @override
+  String get ng_destinations => 'Destinos';
 }

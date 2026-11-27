@@ -6262,4 +6262,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ng_more_chats => 'Más chats';
+
+  @override
+  String get ng_destinations => 'Destinos';
 }

@@ -1730,5 +1730,6 @@
   "ng_chats_in_sidebar": "サイドバーのチャット",
   "ng_how_many_chats_the_sidebar_lists_before_load_more": "「さらに読み込む」の前にサイドバーに表示するチャット数。",
   "ng_fewer_chats": "チャットを減らす",
-  "ng_more_chats": "チャットを増やす"
+  "ng_more_chats": "チャットを増やす",
+  "ng_destinations": "移動先"
 }

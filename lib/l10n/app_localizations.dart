@@ -10499,6 +10499,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'More chats'**
   String get ng_more_chats;
+
+  /// No description provided for @ng_destinations.
+  ///
+  /// In en, this message translates to:
+  /// **'Destinations'**
+  String get ng_destinations;
 }
 
 class _AppLocalizationsDelegate

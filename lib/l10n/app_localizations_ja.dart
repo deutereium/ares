@@ -6080,4 +6080,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ng_more_chats => 'チャットを増やす';
+
+  @override
+  String get ng_destinations => '移動先';
 }

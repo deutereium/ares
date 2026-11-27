@@ -1730,5 +1730,6 @@
   "ng_chats_in_sidebar": "Chats na barra lateral",
   "ng_how_many_chats_the_sidebar_lists_before_load_more": "Quantos chats a barra lateral mostra antes de “Carregar mais”.",
   "ng_fewer_chats": "Menos chats",
-  "ng_more_chats": "Mais chats"
+  "ng_more_chats": "Mais chats",
+  "ng_destinations": "Destinos"
 }

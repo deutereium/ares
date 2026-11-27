@@ -1883,5 +1883,6 @@
   "ng_chats_in_sidebar": "Чати на бічній панелі",
   "ng_how_many_chats_the_sidebar_lists_before_load_more": "Скільки чатів показувати на бічній панелі до «Завантажити ще».",
   "ng_fewer_chats": "Менше чатів",
-  "ng_more_chats": "Більше чатів"
+  "ng_more_chats": "Більше чатів",
+  "ng_destinations": "Розділи"
 }

@@ -1730,5 +1730,6 @@
   "ng_chats_in_sidebar": "Чаты на боковой панели",
   "ng_how_many_chats_the_sidebar_lists_before_load_more": "Сколько чатов показывать на боковой панели до «Загрузить ещё».",
   "ng_fewer_chats": "Меньше чатов",
-  "ng_more_chats": "Больше чатов"
+  "ng_more_chats": "Больше чатов",
+  "ng_destinations": "Разделы"
 }

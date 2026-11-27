@@ -1730,5 +1730,6 @@
   "ng_chats_in_sidebar": "Chats in der Seitenleiste",
   "ng_how_many_chats_the_sidebar_lists_before_load_more": "Wie viele Chats die Seitenleiste vor „Mehr laden“ anzeigt.",
   "ng_fewer_chats": "Weniger Chats",
-  "ng_more_chats": "Mehr Chats"
+  "ng_more_chats": "Mehr Chats",
+  "ng_destinations": "Ziele"
 }

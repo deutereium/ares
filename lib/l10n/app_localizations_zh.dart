@@ -5994,6 +5994,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ng_more_chats => '增加聊天';
+
+  @override
+  String get ng_destinations => '目的地';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11794,4 +11797,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get ng_more_chats => '增加聊天';
+
+  @override
+  String get ng_destinations => '目的地';
 }

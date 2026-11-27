@@ -6083,4 +6083,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ng_more_chats => '채팅 늘리기';
+
+  @override
+  String get ng_destinations => '이동';
 }
