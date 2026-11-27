@@ -18,7 +18,6 @@ import '../nextgen_preferences.dart';
 import '../theme/nextgen_theme.dart';
 import 'models_page.dart';
 import 'nextgen_scope.dart';
-import 'profile_switcher.dart';
 import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
@@ -194,8 +193,6 @@ class _NgSettingsPageState extends State<NgSettingsPage> {
                     _ =>
                       _signedInAs ?? conn.dashboardUsername ?? ngL.ng_password,
                   }),
-                  if (conn.gatewayProfile != null)
-                    _kv(c, ngL.ng_profile, conn.gatewayProfile!),
                   if (_report != null) ...[
                     const Divider(height: 24),
                     for (final stage in CheckStage.values)
@@ -211,11 +208,6 @@ class _NgSettingsPageState extends State<NgSettingsPage> {
                         label: Text(
                           _checking ? ngL.ng_testing : ngL.ng_test_connection,
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => showNgProfileSwitcher(context),
-                        icon: const Icon(Icons.swap_horiz, size: 18),
-                        label: Text(ngL.switch_profile),
                       ),
                       TextButton.icon(
                         onPressed: scope.signInAgain,

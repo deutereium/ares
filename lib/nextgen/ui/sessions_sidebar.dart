@@ -62,8 +62,14 @@ class NgSessionsModel extends ChangeNotifier {
     _showSubagents = null;
     sessions = [];
     profiles = const [];
+    _aggregated = false;
+    _profilesRetryAt = null;
     _serverOffset = 0;
     hasMore = false;
+    // The in-flight page/refresh belongs to the old scope; its generation
+    // guard will discard the result, so clear its spinners here.
+    loading = false;
+    loadingMore = false;
     _listen();
   }
 
@@ -74,7 +80,17 @@ class NgSessionsModel extends ChangeNotifier {
   /// and legacy gateways on the plain scoped listing.
   List<String> profiles = const [];
 
-  bool get aggregatesProfiles => profiles.isNotEmpty;
+  /// Whether the last listing actually came from the all-profiles endpoint.
+  /// The name list can survive a failed refresh, so this cannot be inferred
+  /// from [profiles] alone.
+  bool _aggregated = false;
+
+  bool get aggregatesProfiles => _aggregated;
+
+  /// The running state a chat controller already knows for [id], or null when
+  /// this app has not loaded that chat. A finished turn clears the spinner
+  /// immediately instead of waiting out the gateway's five-minute window.
+  bool? Function(String id)? isKnownRunning;
 
   /// The profile that owns [s], preferring the row's own tag from the
   /// all-profiles endpoint and falling back to the connection's profile.
@@ -158,13 +174,23 @@ class NgSessionsModel extends ChangeNotifier {
   }
 
   /// The gateway's `is_active` is a five-minute liveness window, not a live
-  /// turn flag. Without a timestamp check a finished chat keeps its spinner
-  /// until some unrelated event happens to refresh the list.
+  /// turn flag. A chat this app has loaded asks its controller instead, so a
+  /// finished turn clears the spinner at once; the window remains the fallback
+  /// for chats never opened here.
   bool isRunning(Session s) {
+    // A loaded controller is the source of truth even if the server row has
+    // not caught up yet: a just-sent turn should spin at once, and a finished
+    // one must stop even while its five-minute window is still open.
+    final known = isKnownRunning?.call(s.id);
+    if (known != null) return known;
     if (!s.isActive || s.endedAt != null) return false;
     final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
     return now - s.lastActive < kSessionActiveWindowSeconds;
   }
+
+  /// Wakes the drawer when a chat's own running state changes, without a
+  /// server round trip.
+  void poke() => notifyListeners();
 
   /// Rebuild the drawer when the soonest liveness window ends, so a spinner
   /// disappears on its own instead of waiting for another socket event.
@@ -173,7 +199,7 @@ class NgSessionsModel extends ChangeNotifier {
     final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
     var soonest = double.infinity;
     for (final s in sessions) {
-      if (!s.isActive || s.endedAt != null) continue;
+      if (!isRunning(s)) continue;
       final left = kSessionActiveWindowSeconds - (now - s.lastActive);
       if (left > 0 && left < soonest) soonest = left;
     }
@@ -255,6 +281,11 @@ class NgSessionsModel extends ChangeNotifier {
   }
 
   bool loading = false;
+
+  /// True only while [loadMore] appends a page. Refreshes set [loading], but
+  /// the drawer's bottom spinner must not appear for those: a periodic refresh
+  /// with nothing left to page looked like a never-ending load.
+  bool loadingMore = false;
   bool hasMore = false;
 
   /// One server page. Browse reads several when cron or internal runs fill
@@ -278,6 +309,9 @@ class NgSessionsModel extends ChangeNotifier {
   int _generation = 0;
   Future<void>? _refreshing;
   bool _refreshPending = false;
+
+  /// A gateway that cannot list profiles must not be probed on every refresh.
+  DateTime? _profilesRetryAt;
 
   /// Coalesces bursts from lifecycle, drawer and socket events into one active
   /// request and at most one trailing request with the latest query.
@@ -305,20 +339,42 @@ class NgSessionsModel extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final aggregate = cachedNgProfiles(scope);
+      // Warm-up is best effort and can lose a race with the first refresh, so
+      // discover the profile list here too instead of staying single-profile
+      // until the next launch. A gateway that does not support it is only
+      // asked again after a short backoff.
+      var aggregate = cachedNgProfiles(scope);
+      if (aggregate == null || aggregate.isEmpty) {
+        final now = DateTime.now();
+        final retryAt = _profilesRetryAt;
+        // Only probe a live gateway: an unstarted one (as in model tests) has
+        // no HTTP session, and a disconnected one will refresh on reconnect.
+        if (scope.gateway.state.isConnected &&
+            (retryAt == null || !now.isBefore(retryAt))) {
+          try {
+            aggregate = await ngProfiles(scope);
+            _profilesRetryAt = null;
+          } catch (_) {
+            // Offline or unsupported: retry after the backoff.
+            _profilesRetryAt = now.add(const Duration(seconds: 15));
+          }
+          if (generation != _generation) return;
+        }
+      }
       if (aggregate != null && aggregate.isNotEmpty) {
         profiles = List<String>.unmodifiable(aggregate);
+      }
+      if (profiles.isNotEmpty) {
         try {
           await _refreshAcrossProfiles(generation, browsingCrons);
         } catch (_) {
           // A gateway that lists profiles but predates the merged endpoint
-          // still works through its own profile-scoped listing.
+          // still works through its own profile-scoped listing. Keep the
+          // names so the next refresh can retry the merged listing.
           if (generation != _generation) return;
-          profiles = const [];
           await _refreshSingleProfile(api, generation, browsingCrons);
         }
       } else {
-        profiles = const [];
         await _refreshSingleProfile(api, generation, browsingCrons);
       }
       if (generation != _generation) return;
@@ -336,6 +392,9 @@ class NgSessionsModel extends ChangeNotifier {
     } finally {
       if (generation == _generation) {
         loading = false;
+        // A refresh supersedes an in-flight append; its own finally will not
+        // run for this generation, so clear the bottom spinner here.
+        loadingMore = false;
         notifyListeners();
         _scheduleActiveExpiry();
       }
@@ -377,6 +436,7 @@ class NgSessionsModel extends ChangeNotifier {
                   : session,
       ]..sort((a, b) => _recency(b).compareTo(_recency(a)));
       sessions = collected;
+      _aggregated = true;
       _serverOffset = 0;
       hasMore = false;
       return;
@@ -394,6 +454,7 @@ class NgSessionsModel extends ChangeNotifier {
     );
     if (generation != _generation) return;
     sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
+    _aggregated = true;
     _serverOffset = page.sessions.length;
     hasMore = page.hasMore;
   }
@@ -403,6 +464,7 @@ class NgSessionsModel extends ChangeNotifier {
     int generation,
     bool browsingCrons,
   ) async {
+    _aggregated = false;
     if (query.isNotEmpty) {
       // Search is one server-side read; it does not page.
       final page = await api.getSessionsPage(limit: _pageSize, title: query);
@@ -457,6 +519,7 @@ class NgSessionsModel extends ChangeNotifier {
     if (loading || !hasMore || query.isNotEmpty) return;
     final generation = _generation;
     loading = true;
+    loadingMore = true;
     notifyListeners();
     try {
       final api = scope.gateway.api;
@@ -506,6 +569,7 @@ class NgSessionsModel extends ChangeNotifier {
     } finally {
       if (generation == _generation) {
         loading = false;
+        loadingMore = false;
         notifyListeners();
         _scheduleActiveExpiry();
       }
@@ -590,6 +654,7 @@ class NgSessionsSidebar extends StatefulWidget {
     required this.onNewChat,
     required this.onDestination,
     this.onNewGroupChat,
+    this.onOpenDestinations,
     this.bots,
     this.onOpenBot,
     this.onOpenGroup,
@@ -604,6 +669,10 @@ class NgSessionsSidebar extends StatefulWidget {
   /// Starts a new chat on [profile]'s store; null means the connection's own.
   final void Function(String? profile) onNewChat;
   final ValueChanged<NgDestination> onDestination;
+
+  /// Opens the right sidebar from the header, so it is reachable from the
+  /// Bots tab too (not only by an edge swipe).
+  final VoidCallback? onOpenDestinations;
 
   /// Offered beside New chat while the Bots tab is showing.
   final Future<void> Function()? onNewGroupChat;
@@ -1012,6 +1081,19 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                       ),
                       const SizedBox(width: 8),
                       _tabToggle(c),
+                      if (widget.onOpenDestinations != null) ...[
+                        const SizedBox(width: 2),
+                        IconButton(
+                          key: const Key('ng-destinations-button-sidebar'),
+                          tooltip: ngL.ng_destinations,
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(
+                            Icons.space_dashboard_outlined,
+                            size: 20,
+                          ),
+                          onPressed: widget.onOpenDestinations,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1088,7 +1170,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                           // Ten rows show first; each tap reveals ten more, and
                           // only then asks the gateway for another page.
                           if ((hasLocalMore || widget.model.hasMore) &&
-                              !widget.model.loading &&
+                              !widget.model.loadingMore &&
                               widget.model.query.isEmpty)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1109,7 +1191,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                                 ),
                               ),
                             ),
-                          if (widget.model.loading)
+                          if (widget.model.loadingMore)
                             const Padding(
                               padding: EdgeInsets.all(16),
                               child: Center(

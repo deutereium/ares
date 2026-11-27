@@ -19,7 +19,6 @@ import '../nextgen_preferences.dart';
 import '../theme/nextgen_theme.dart';
 import 'models_page.dart';
 import 'nextgen_scope.dart';
-import 'profile_switcher.dart';
 import 'projects_page.dart';
 import 'scheduled_page.dart';
 import 'sessions_sidebar.dart';
@@ -139,16 +138,6 @@ class NgMorePage extends StatelessWidget {
                   onTap: () => push(NousPortalScreen(connection: conn)),
                 ),
               ],
-            ),
-          ),
-          NgSectionLabel(ngL.ng_profile),
-          NgCard(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: NgRow(
-              icon: Icons.person_outline,
-              title: context.l10n.switch_profile,
-              subtitle: conn.gatewayProfile ?? ngL.ng_server_default,
-              onTap: () => showNgProfileSwitcher(context),
             ),
           ),
           NgSectionLabel(ngL.ng_interface),

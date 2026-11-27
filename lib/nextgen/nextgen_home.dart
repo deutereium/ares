@@ -96,13 +96,17 @@ class _NextGenHomeState extends State<NextGenHome> {
       );
       return;
     }
+    // Profiles are chosen per chat now, so the connection itself always talks
+    // to the gateway's system-default profile. A profile saved by an older
+    // build (or the connect chooser) must not pin every REST/WS call.
+    final effective = connection.copyWith(clearGatewayProfile: true);
     if (!force &&
         current != null &&
-        current.connection.id == connection.id &&
-        _sameAccess(current.connection, connection)) {
+        current.connection.id == effective.id &&
+        _sameAccess(current.connection, effective)) {
       return;
     }
-    final next = NextGenGateway(connection)..start();
+    final next = NextGenGateway(effective)..start();
     setState(() {
       _gateway = next;
       // A different gateway starts from a fresh navigator and chat.

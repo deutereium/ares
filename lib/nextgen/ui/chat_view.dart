@@ -47,6 +47,7 @@ class NgChatView extends StatefulWidget {
     super.key,
     required this.chat,
     required this.onOpenSidebar,
+    this.onOpenDestinations,
     this.sessions,
     required this.onNewChat,
     this.readAloudFactory,
@@ -54,6 +55,9 @@ class NgChatView extends StatefulWidget {
 
   final NgChatController chat;
   final VoidCallback onOpenSidebar;
+
+  /// Opens the right sidebar (destination shortcuts) from the top bar.
+  final VoidCallback? onOpenDestinations;
 
   /// The sidebar's list, for a dot on its button while other chats are unread.
   final NgSessionsModel? sessions;
@@ -74,7 +78,8 @@ class _NgChatViewState extends State<NgChatView> {
     final scope = NgScope.of(context);
     return RemoteFilesClient(
       dashboard: DashboardClient.fromConnection(scope.connection),
-      profile: scope.gateway.profile,
+      // Files belong to the chat's own profile, not the connection's default.
+      profile: chat.sessionProfile ?? scope.gateway.profile,
       sessionId: chat.storedId,
       maxDownloadBytes: maxAttachmentDownloadBytes,
     );
@@ -555,8 +560,13 @@ class _NgChatViewState extends State<NgChatView> {
         final isBot = identity?.isBot ?? false;
         final botName = identity?.botName?.trim() ?? '';
         final botDescription = identity?.botDescription?.trim() ?? '';
+        // A chat opened from another profile must name that profile, not the
+        // connection's own.
         final profileName =
-            identity?.profileName ?? gateway.profile ?? 'default';
+            identity?.profileName ??
+            chat.sessionProfile ??
+            gateway.profile ??
+            'default';
         final headerTitle = isBot ? botName : profileName;
         final headerSubtitle = isBot
             ? (botDescription.isEmpty ? ngL.ng_ready : botDescription)
@@ -635,6 +645,13 @@ class _NgChatViewState extends State<NgChatView> {
                   tooltip: ngL.ng_usage,
                   icon: const Icon(Icons.data_usage),
                   onPressed: _showUsage,
+                ),
+              if (widget.onOpenDestinations != null)
+                IconButton(
+                  key: const Key('ng-destinations-button-chat'),
+                  tooltip: ngL.ng_destinations,
+                  icon: const Icon(Icons.space_dashboard_outlined),
+                  onPressed: widget.onOpenDestinations,
                 ),
               IconButton(
                 tooltip: ngL.ng_new_chat,

@@ -116,7 +116,9 @@ class _NgMainPageState extends State<_NgMainContent>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final scope = NgScope.of(context);
-    unawaited(warmNgProfiles(scope));
+    // The first refresh may win the race with the warm-up; refresh again once
+    // the profile list is known so the sidebar cannot stay single-profile.
+    unawaited(warmNgProfiles(scope).then((_) => _sessions?.refresh()));
     if (!identical(_notificationGateway, scope.gateway)) {
       _notificationGateway = scope.gateway;
       _notificationMutation = ConnectionMutationBarrier.capture(
@@ -125,7 +127,7 @@ class _NgMainPageState extends State<_NgMainContent>
     }
     final sessions = _sessions;
     if (sessions == null) {
-      _sessions = NgSessionsModel(scope);
+      _sessions = NgSessionsModel(scope)..isKnownRunning = _knownRunning;
       _bots = NgBotsModel(scope);
       _bots!.startPolling();
       unawaited(_sessions!.refresh());
@@ -136,6 +138,7 @@ class _NgMainPageState extends State<_NgMainContent>
       _listenForRequests(scope);
     } else {
       sessions.scope = scope;
+      sessions.isKnownRunning = _knownRunning;
       _bots?.adoptScope(scope);
     }
   }
@@ -472,11 +475,14 @@ class _NgMainPageState extends State<_NgMainContent>
       final stored = chat.storedId;
       if (stored != null) _cancelReply(stored);
     }
+    if (chat.running != _chatWasRunning) _sessions?.poke();
     _chatWasRunning = chat.running;
     nextGenTurnActive.value = chat.running;
   }
 
   void _turnFinished(NgChatController chat) {
+    // Clear the sidebar's spinner before the list refresh lands.
+    _sessions?.poke();
     unawaited(_sessions?.refresh());
     if (!mounted) return;
     final label = chat.title.isEmpty ? ngL.ng_hermes_replied : chat.title;
@@ -593,9 +599,23 @@ class _NgMainPageState extends State<_NgMainContent>
   /// same chat a second controller cache entry and skip last-session restore.
   String? _profileOf(Session s) {
     final profile = _sessions?.profileOf(s);
-    final own = NgScope.of(context).connection.gatewayProfile;
-    if (profile == null || profile == own) return null;
-    return profile;
+    if (profile == null) return null;
+    final own = NgScope.of(context).connection.gatewayProfile?.trim();
+    // The gateway stores its system-default profile as `default`; a chat
+    // tagged with it is an ordinary chat, not another profile.
+    final ownName = (own == null || own.isEmpty) ? 'default' : own;
+    return profile == ownName ? null : profile;
+  }
+
+  /// The live turn state for a chat this app has loaded, so the sidebar can
+  /// stop a spinner the moment a turn finishes. Null when never loaded here.
+  bool? _knownRunning(String id) {
+    final active = _chat;
+    if (active != null && active.storedId == id) return active.running;
+    for (final c in _cache.values) {
+      if (c.storedId == id) return c.running;
+    }
+    return null;
   }
 
   void _open(Session s) {
@@ -604,7 +624,13 @@ class _NgMainPageState extends State<_NgMainContent>
     _openId(s.id, ngSessionTitle(s), sessionProfile: _profileOf(s));
   }
 
-  void _newChat() => _newChatOn(null);
+  void _newChat() => unawaited(_pickNewChatProfile());
+
+  Future<void> _pickNewChatProfile() async {
+    final choice = await showNgNewChatProfilePicker(context);
+    if (!mounted || choice == null) return;
+    _newChatOn(choice.profile);
+  }
 
   /// Starts a blank chat on [profile]'s store (null = this connection's own).
   void _newChatOn(String? profile) {
@@ -744,6 +770,7 @@ class _NgMainPageState extends State<_NgMainContent>
           onNewChat: _newChatOn,
           onNewGroupChat: _newGroupChat,
           onDestination: _go,
+          onOpenDestinations: () => _scaffold.currentState?.openEndDrawer(),
           onOpenBot: _openBot,
           onOpenGroup: _openGroup,
           selectedTab: _sidebarTab,
@@ -756,6 +783,8 @@ class _NgMainPageState extends State<_NgMainContent>
                 key: ObjectKey(chat),
                 chat: chat,
                 onOpenSidebar: () => _scaffold.currentState?.openDrawer(),
+                onOpenDestinations: () =>
+                    _scaffold.currentState?.openEndDrawer(),
                 sessions: _sessions,
                 onNewChat: _newChat,
               ),

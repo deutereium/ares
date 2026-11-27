@@ -75,10 +75,22 @@ Future<({String? profile})?> showNgNewChatProfilePicker(
   BuildContext context,
 ) async {
   final scope = NgScope.of(context);
-  final current = scope.connection.gatewayProfile;
-  final names = cachedNgProfiles(scope) ?? const <String>[];
+  final current = scope.connection.gatewayProfile?.trim();
+  // The connection now runs on the system-default profile, which the gateway
+  // stores as `default`; it is the "own" choice, not another profile.
+  final ownName = (current == null || current.isEmpty) ? 'default' : current;
+  var names = cachedNgProfiles(scope);
+  if (names == null || names.isEmpty) {
+    // The warm-up can lose a race with the first New Chat; ask once here too.
+    try {
+      names = await ngProfiles(scope);
+    } catch (_) {
+      names = const <String>[];
+    }
+    if (!context.mounted) return null;
+  }
   final others = names
-      .where((p) => p.trim().isNotEmpty && p != current)
+      .where((p) => p.trim().isNotEmpty && p != ownName)
       .toList(growable: false);
   if (others.isEmpty) return (profile: null);
 
