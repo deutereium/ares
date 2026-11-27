@@ -1450,6 +1450,7 @@
   "ng_job": "Auftrag {id}",
   "ng_delete": "Löschen",
   "ng_description": "Beschreibung",
+  "ng_folder": "Ordner",
   "ng_delete_this_job": "Diesen Auftrag löschen?",
   "ng_it_stops_running_past_runs_stay": "Der Auftrag wird nicht mehr ausgeführt. Frühere Ausführungen bleiben in deinen Chats.",
   "ng_next_run": "Nächste Ausführung {when}",

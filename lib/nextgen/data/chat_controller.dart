@@ -1040,6 +1040,14 @@ class NgChatController extends ChangeNotifier {
     await _attach();
   }
 
+  /// Re-runs the transcript load after a network drop or gateway restart.
+  Future<void> retryHistory() async {
+    if (_disposed || loadingHistory) return;
+    historyError = null;
+    _changed();
+    await open();
+  }
+
   static int? _authorityInt(Object? value) {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '');
@@ -2389,11 +2397,11 @@ class NgChatController extends ChangeNotifier {
       }
       if (draft.isImage) {
         final bytes = await File(draft.cachedPath).readAsBytes();
-        final result = await gateway.call('image.attach_bytes', {
+        final result = await gateway.call('image.attach_bytes', _scoped({
           'session_id': runtimeId,
           'content_base64': base64Encode(bytes),
           'filename': draft.name,
-        }, timeout: const Duration(minutes: 2));
+        }), timeout: const Duration(minutes: 2));
         if (result['attached'] != true) {
           throw StateError(
             result['message']?.toString() ??
@@ -2406,12 +2414,12 @@ class NgChatController extends ChangeNotifier {
         return null;
       }
       final dataUrl = await attachmentService.readDataUrl(draft);
-      final result = await gateway.call('file.attach', {
+      final result = await gateway.call('file.attach', _scoped({
         'session_id': runtimeId,
         'name': draft.name,
         'path': '',
         'data_url': dataUrl,
-      }, timeout: const Duration(minutes: 2));
+      }), timeout: const Duration(minutes: 2));
       final ref = result['ref_text']?.toString() ?? '';
       if (result['attached'] != true || ref.isEmpty) {
         throw StateError('The gateway did not attach ${draft.name}.');
@@ -2511,11 +2519,11 @@ class NgChatController extends ChangeNotifier {
     } catch (_) {}
     var usedInPlace = false;
     try {
-      final result = await gateway.call('file.attach', {
+      final result = await gateway.call('file.attach', _scoped({
         'session_id': runtimeId,
         'path': staged,
         'name': draft.name,
-      }, timeout: const Duration(minutes: 5));
+      }), timeout: const Duration(minutes: 5));
       final uploaded = result['uploaded'];
       usedInPlace = uploaded is bool
           ? !uploaded
@@ -2545,10 +2553,10 @@ class NgChatController extends ChangeNotifier {
   Future<void> _detach(List<String> paths) async {
     for (final path in paths) {
       try {
-        await gateway.call('image.detach', {
+        await gateway.call('image.detach', _scoped({
           'session_id': runtimeId,
           'path': path,
-        });
+        }));
       } catch (_) {
         return; // the socket is likely gone, and the queue with it
       }

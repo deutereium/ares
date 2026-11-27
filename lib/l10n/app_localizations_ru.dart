@@ -5281,6 +5281,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ng_description => 'Описание';
 
   @override
+  String get ng_folder => 'Папка';
+
+  @override
   String get ng_delete_this_job => 'Удалить эту задачу?';
 
   @override

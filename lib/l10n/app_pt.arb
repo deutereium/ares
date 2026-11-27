@@ -1450,6 +1450,7 @@
   "ng_job": "Trabalho {id}",
   "ng_delete": "Eliminar",
   "ng_description": "Descrição",
+  "ng_folder": "Pasta",
   "ng_delete_this_job": "Eliminar este trabalho?",
   "ng_it_stops_running_past_runs_stay": "Deixará de ser executado. As execuções anteriores continuam nas conversas.",
   "ng_next_run": "Próxima execução {when}",

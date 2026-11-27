@@ -1450,6 +1450,7 @@
   "ng_job": "Tâche {id}",
   "ng_delete": "Supprimer",
   "ng_description": "Description",
+  "ng_folder": "Dossier",
   "ng_delete_this_job": "Supprimer cette tâche ?",
   "ng_it_stops_running_past_runs_stay": "Elle cessera de s’exécuter. Les exécutions passées resteront dans vos conversations.",
   "ng_next_run": "Prochaine exécution : {when}",

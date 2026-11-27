@@ -353,6 +353,7 @@ class NgBotsModel extends ChangeNotifier {
     required String name,
     required String title,
     required String description,
+    String? sectionName,
     Uint8List? avatarBytes,
     bool removeAvatar = false,
   }) async {
@@ -392,6 +393,14 @@ class NgBotsModel extends ChangeNotifier {
         next.remove('title');
       } else {
         next['title'] = cleanTitle;
+      }
+      if (sectionName != null) {
+        final cleanSection = sectionName.trim();
+        if (cleanSection.isEmpty) {
+          next.remove('sectionName');
+        } else {
+          next['sectionName'] = cleanSection;
+        }
       }
       if (removeAvatar) {
         next.remove('custom');

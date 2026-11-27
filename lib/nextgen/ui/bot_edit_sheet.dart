@@ -17,16 +17,22 @@ Future<bool?> showNgBotEditSheet(
   BuildContext context, {
   required NgBotsModel model,
   required NgBot bot,
+  List<String> folders = const [],
 }) => showNgSheet<bool>(
   context,
-  builder: (_) => _NgBotEditSheet(model: model, bot: bot),
+  builder: (_) => _NgBotEditSheet(model: model, bot: bot, folders: folders),
 );
 
 class _NgBotEditSheet extends StatefulWidget {
-  const _NgBotEditSheet({required this.model, required this.bot});
+  const _NgBotEditSheet({
+    required this.model,
+    required this.bot,
+    required this.folders,
+  });
 
   final NgBotsModel model;
   final NgBot bot;
+  final List<String> folders;
 
   @override
   State<_NgBotEditSheet> createState() => _NgBotEditSheetState();
@@ -35,6 +41,7 @@ class _NgBotEditSheet extends StatefulWidget {
 class _NgBotEditSheetState extends State<_NgBotEditSheet> {
   late final TextEditingController _title;
   late final TextEditingController _description;
+  late final TextEditingController _folder;
   final _picker = ImagePicker();
   Uint8List? _picked;
   bool _removeAvatar = false;
@@ -47,12 +54,16 @@ class _NgBotEditSheetState extends State<_NgBotEditSheet> {
     super.initState();
     _title = TextEditingController(text: bot.title);
     _description = TextEditingController(text: bot.description);
+    _folder = TextEditingController(
+      text: bot.section == 'unassigned' ? '' : bot.section,
+    );
   }
 
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
+    _folder.dispose();
     super.dispose();
   }
 
@@ -99,6 +110,7 @@ class _NgBotEditSheetState extends State<_NgBotEditSheet> {
         name: bot.name,
         title: _title.text,
         description: _description.text,
+        sectionName: _folder.text,
         avatarBytes: _picked,
         removeAvatar: _removeAvatar,
       );
@@ -193,6 +205,34 @@ class _NgBotEditSheetState extends State<_NgBotEditSheet> {
               label: ngL.ng_description,
               lines: 3,
             ),
+            const SizedBox(height: 12),
+            _field(
+              key: const Key('ng-bot-edit-folder'),
+              controller: _folder,
+              label: ngL.ng_folder,
+            ),
+            if (widget.folders.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final folder in widget.folders)
+                    ActionChip(
+                      label: Text(folder),
+                      onPressed: _busy
+                          ? null
+                          : () => setState(() => _folder.text = folder),
+                    ),
+                  ActionChip(
+                    label: Text(ngL.ng_unassigned),
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() => _folder.text = ''),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,

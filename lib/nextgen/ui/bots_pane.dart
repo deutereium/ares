@@ -113,6 +113,9 @@ class _NgBotsPaneState extends State<NgBotsPane> {
       context,
       model: widget.model,
       bot: bot,
+      folders: widget.model.botSections.keys
+          .where((key) => key != 'unassigned')
+          .toList(growable: false),
     );
   }
 

@@ -5276,6 +5276,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get ng_description => 'Опис';
 
   @override
+  String get ng_folder => 'Тека';
+
+  @override
   String get ng_delete_this_job => 'Видалити це завдання?';
 
   @override

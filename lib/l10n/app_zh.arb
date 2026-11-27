@@ -1450,6 +1450,7 @@
   "ng_job": "任务 {id}",
   "ng_delete": "删除",
   "ng_description": "描述",
+  "ng_folder": "文件夹",
   "ng_delete_this_job": "删除此任务？",
   "ng_it_stops_running_past_runs_stay": "删除后将停止运行。以往的运行记录仍会保留在聊天中。",
   "ng_next_run": "下次运行：{when}",

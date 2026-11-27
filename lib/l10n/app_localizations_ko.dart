@@ -5128,6 +5128,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ng_description => '설명';
 
   @override
+  String get ng_folder => '폴더';
+
+  @override
   String get ng_delete_this_job => '이 작업을 삭제할까요?';
 
   @override

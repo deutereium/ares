@@ -108,10 +108,15 @@ class _NgChatViewState extends State<NgChatView> {
 
   NgChatController get chat => widget.chat;
 
+  /// Tracks the socket so a failed load can retry itself on reconnect.
+  bool _gatewayUp = false;
+
   @override
   void initState() {
     super.initState();
     chat.addListener(_onChat);
+    _gatewayUp = chat.gateway.state.isConnected;
+    chat.gateway.addListener(_onGateway);
     _readAloud = (widget.readAloudFactory ?? NgReadAloud.new)();
     _readAloud.addListener(_onReadAloud);
     _readAloud.onUnavailable = () {
@@ -137,7 +142,10 @@ class _NgChatViewState extends State<NgChatView> {
     super.didUpdateWidget(old);
     if (old.chat != chat) {
       old.chat.removeListener(_onChat);
+      old.chat.gateway.removeListener(_onGateway);
       chat.addListener(_onChat);
+      _gatewayUp = chat.gateway.state.isConnected;
+      chat.gateway.addListener(_onGateway);
       // A reply being read belongs to the chat we left.
       unawaited(_readAloud.stop());
     }
@@ -166,6 +174,16 @@ class _NgChatViewState extends State<NgChatView> {
     setState(() {});
   }
 
+  void _onGateway() {
+    final up = chat.gateway.state.isConnected;
+    final reconnected = up && !_gatewayUp;
+    _gatewayUp = up;
+    if (!mounted || !reconnected) return;
+    if (chat.historyError != null && !chat.loadingHistory) {
+      unawaited(chat.retryHistory());
+    }
+  }
+
   /// The transcript is reversed, so its top is the scroll's far end: fetch
   /// the page before when the reader gets near it.
   void _maybeLoadOlder({bool auto = false}) {
@@ -186,6 +204,7 @@ class _NgChatViewState extends State<NgChatView> {
   @override
   void dispose() {
     chat.removeListener(_onChat);
+    chat.gateway.removeListener(_onGateway);
     _readAloud.removeListener(_onReadAloud);
     _readAloud.dispose();
     _ticker?.cancel();
@@ -331,7 +350,12 @@ class _NgChatViewState extends State<NgChatView> {
       // before, provided the draft is still the one that was decided on.
       if (!mounted || _input.text.trim() != text) return;
     }
-    if (_drafts.isNotEmpty && !chat.running) {
+    if (_drafts.isNotEmpty) {
+      if (chat.running) {
+        // Files cannot ride a steer or a queued prompt: keep them for after.
+        ngToast(context, ngL.ng_hermes_is_still_working);
+        return;
+      }
       final drafts = List.of(_drafts);
       _input.clear();
       setState(_drafts.clear);
@@ -833,16 +857,26 @@ class _NgChatViewState extends State<NgChatView> {
       return const Center(child: CircularProgressIndicator());
     }
     if (chat.items.isEmpty) {
+      final error = chat.historyError;
       return NgGlow(
         child: NgEmpty(
-          icon: Icons.auto_awesome,
-          title: chat.historyError ?? ngL.ng_what_should_we_work_on,
-          titleWidget: chat.canPickProject && chat.historyError == null
+          icon: error == null ? Icons.auto_awesome : Icons.cloud_off_outlined,
+          title: error ?? ngL.ng_what_should_we_work_on,
+          titleWidget: chat.canPickProject && error == null
               ? NgProjectGreeting(chat: chat)
               : null,
-          body: chat.historyError == null
+          body: error == null
               ? ngL.ng_ask_hermes_anything_it_can_run
-              : null,
+              : ngL.check_the_connection_and_try_again,
+          action: error == null
+              ? null
+              : FilledButton.icon(
+                  onPressed: chat.loadingHistory
+                      ? null
+                      : () => unawaited(chat.retryHistory()),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(ngL.retry),
+                ),
         ),
       );
     }

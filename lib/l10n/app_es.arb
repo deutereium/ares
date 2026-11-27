@@ -1450,6 +1450,7 @@
   "ng_job": "Tarea {id}",
   "ng_delete": "Eliminar",
   "ng_description": "Descripción",
+  "ng_folder": "Carpeta",
   "ng_delete_this_job": "¿Eliminar esta tarea?",
   "ng_it_stops_running_past_runs_stay": "Dejará de ejecutarse. Las ejecuciones anteriores seguirán en tus chats.",
   "ng_next_run": "Próxima ejecución {when}",

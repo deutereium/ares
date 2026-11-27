@@ -1450,6 +1450,7 @@
   "ng_job": "작업 {id}",
   "ng_delete": "삭제",
   "ng_description": "설명",
+  "ng_folder": "폴더",
   "ng_delete_this_job": "이 작업을 삭제할까요?",
   "ng_it_stops_running_past_runs_stay": "작업 실행이 중지돼요. 이전 실행 기록은 채팅에 남아요.",
   "ng_next_run": "다음 실행 {when}",

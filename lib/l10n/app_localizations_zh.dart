@@ -5053,6 +5053,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ng_description => '描述';
 
   @override
+  String get ng_folder => '文件夹';
+
+  @override
   String get ng_delete_this_job => '删除此任务？';
 
   @override

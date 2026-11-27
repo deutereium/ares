@@ -5,7 +5,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hermes_android/core/models/connection.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
 import 'package:hermes_android/nextgen/data/nextgen_bots.dart';
 import 'package:hermes_android/nextgen/data/nextgen_gateway.dart';
@@ -148,6 +147,7 @@ void main() {
       name: 'sol',
       title: '  Sol  ',
       description: ' helps with code ',
+      sectionName: ' Main ',
     );
 
     expect(ok, isTrue);
@@ -159,7 +159,30 @@ void main() {
     expect(meta['title'], 'Sol');
     // Fields this client does not own survive the write.
     expect(meta['color'], '#ff8800');
-    expect(meta['sectionName'], 'Work');
+    expect(meta['sectionName'], 'Main');
+  });
+
+  test('saveBot clears the section to move a bot to Unassigned', () async {
+    await seed(_row());
+    gateway.onCall = (method, params) async => switch (method) {
+      'profiles.list' => {'profiles': [_row()]},
+      'profiles.configure' => {
+        'ok': true,
+        'applied': {'ui_meta': true},
+      },
+      _ => <String, dynamic>{},
+    };
+
+    await model.saveBot(
+      name: 'sol',
+      title: 'Old',
+      description: 'old role',
+      sectionName: '  ',
+    );
+
+    final meta = gateway.callsTo('profiles.configure').single['ui_meta'][
+        'hermes-bots'] as Map;
+    expect(meta.containsKey('sectionName'), isFalse);
   });
 
   test('saveBot retries a compare-and-swap conflict against the fresh revision',

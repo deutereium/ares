@@ -1450,6 +1450,7 @@
   "ng_job": "Задача {id}",
   "ng_delete": "Удалить",
   "ng_description": "Описание",
+  "ng_folder": "Папка",
   "ng_delete_this_job": "Удалить эту задачу?",
   "ng_it_stops_running_past_runs_stay": "Задача перестанет выполняться. Прошлые запуски останутся в чатах.",
   "ng_next_run": "Следующий запуск: {when}",

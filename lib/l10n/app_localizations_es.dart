@@ -5286,6 +5286,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ng_description => 'Descripción';
 
   @override
+  String get ng_folder => 'Carpeta';
+
+  @override
   String get ng_delete_this_job => '¿Eliminar esta tarea?';
 
   @override

@@ -291,6 +291,15 @@ class PluginTurnNotificationSink implements TurnNotificationSink {
       onlyAlertOnce: notification.onlyAlertOnce,
       playSound: !notification.silent,
       enableVibration: !notification.silent,
+      largeIcon: notification.senderAvatar == null
+          ? null
+          : ByteArrayAndroidBitmap(notification.senderAvatar!),
+      styleInformation: notification.senderName == null
+          ? null
+          : BigTextStyleInformation(
+              notification.body,
+              contentTitle: notification.senderName,
+            ),
       actions: [
         for (final action in notification.actions)
           AndroidNotificationAction(

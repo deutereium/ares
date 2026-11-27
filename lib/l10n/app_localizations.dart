@@ -8842,6 +8842,12 @@ abstract class AppLocalizations {
   /// **'Description'**
   String get ng_description;
 
+  /// No description provided for @ng_folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder'**
+  String get ng_folder;
+
   /// No description provided for @ng_delete_this_job.
   ///
   /// In en, this message translates to:
