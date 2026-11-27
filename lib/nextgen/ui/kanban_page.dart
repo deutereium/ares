@@ -8,6 +8,28 @@ import '../theme/nextgen_theme.dart';
 import 'nextgen_scope.dart';
 import 'widgets.dart';
 
+class _CachedKanban {
+  _CachedKanban(this.dashboard, this.model);
+  final Object dashboard;
+  final NgKanbanModel model;
+}
+
+/// Boards are small and the page is reopened often, so keep the last board per
+/// gateway. A reopened page paints it before the first refresh lands; polling
+/// still stops when the page closes.
+final Map<String, _CachedKanban> _kanbanCache = {};
+
+NgKanbanModel cachedNgKanbanModel(NgScope scope) {
+  final key = '${scope.connection.id}|${scope.gateway.url.display}';
+  final dashboard = scope.gateway.dashboard;
+  final hit = _kanbanCache[key];
+  if (hit != null && identical(hit.dashboard, dashboard)) return hit.model;
+  hit?.model.dispose();
+  final model = NgKanbanModel(DashboardKanbanApi(dashboard));
+  _kanbanCache[key] = _CachedKanban(dashboard, model);
+  return model;
+}
+
 /// Kanban board served by the kanban dashboard plugin. Lanes follow the
 /// default workflow; cards can move between the columns the plugin accepts.
 class NgKanbanPage extends StatefulWidget {
@@ -29,15 +51,14 @@ class _NgKanbanPageState extends State<NgKanbanPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.model != null) return;
-    _own ??= NgKanbanModel(
-      DashboardKanbanApi(NgScope.of(context).gateway.dashboard),
-    );
+    _own ??= cachedNgKanbanModel(NgScope.of(context));
     _own!.startPolling();
   }
 
   @override
   void dispose() {
-    _own?.dispose();
+    // The cache owns the model; only this page's polling stops.
+    _own?.stopPolling();
     super.dispose();
   }
 
