@@ -86,6 +86,12 @@ class TurnNotification {
   final bool onlyAlertOnce;
   final ConversationNotificationTarget? conversation;
 
+  /// The bot that produced this notification, when it is a bot chat. Android
+  /// renders it as the message sender with its avatar instead of a generic
+  /// assistant identity.
+  final String? senderName;
+  final Uint8List? senderAvatar;
+
   const TurnNotification({
     required this.id,
     required this.title,
@@ -98,6 +104,8 @@ class TurnNotification {
     this.silent = false,
     this.onlyAlertOnce = false,
     this.conversation,
+    this.senderName,
+    this.senderAvatar,
   });
 }
 
@@ -244,6 +252,12 @@ class PluginTurnNotificationSink implements TurnNotificationSink {
             'readLabel': strings.ng_mark_as_read,
             'userLabel': strings.task_role_user,
             'channelLabel': notification.channel.name,
+            if (notification.senderName?.trim().isNotEmpty == true) ...[
+              'channelId': notification.channel.id,
+              'senderName': notification.senderName!.trim(),
+            ],
+            if (notification.senderAvatar != null)
+              'senderAvatar': base64Encode(notification.senderAvatar!),
             ...target.data,
             'ticket': ticket,
           });
@@ -793,6 +807,9 @@ class TurnNotificationService {
     String? sessionId,
     String? connectionId,
     ConversationNotificationTarget? conversation,
+    TurnNotificationChannel? channel,
+    String? senderName,
+    Uint8List? senderAvatar,
   }) async {
     if (!notificationKindEnabled(HermesNotificationKind.turnDone)) {
       recordAttempt('reply', title, 'skipped', 'replies are off');
@@ -817,7 +834,9 @@ class TurnNotificationService {
         sessionId: sessionId,
         connectionId: connectionId,
       ),
-      channel: turnChannel,
+      channel: channel ?? turnChannel,
+      senderName: senderName,
+      senderAvatar: senderAvatar,
     );
     // A car conversation stands in for this alert only when the native owner
     // accepts it: when that owner is absent or rejects the post, keep the
@@ -901,6 +920,8 @@ class TurnNotificationService {
           silent: notification.silent,
           onlyAlertOnce: notification.onlyAlertOnce,
           conversation: conversation,
+          senderName: notification.senderName,
+          senderAvatar: notification.senderAvatar,
         ),
       );
       recordAttempt(

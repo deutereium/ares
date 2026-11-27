@@ -7,11 +7,14 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.util.Base64
 import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.graphics.drawable.IconCompat
 import org.json.JSONObject
 import java.util.UUID
 
@@ -79,20 +82,34 @@ internal object HermesAutoNotifications {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val title = (args["title"] as? String).orEmpty().take(256)
         val body = (args["body"] as? String).orEmpty().take(16000)
+        val senderName = (args["senderName"] as? String)?.trim()?.take(120)
+            ?.takeIf { it.isNotEmpty() } ?: "Ares"
+        val avatarBitmap = (args["senderAvatar"] as? String)?.let { encoded ->
+            runCatching {
+                val bytes = Base64.decode(encoded, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }.getOrNull()
+        }
+        val senderIcon = avatarBitmap?.let { IconCompat.createWithBitmap(it) }
+        val sender = Person.Builder().setName(senderName).setKey("bot:$senderName").apply {
+            senderIcon?.let { setIcon(it) }
+        }.build()
+        val channelId = (args["channelId"] as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: CHANNEL
         if (Build.VERSION.SDK_INT >= 26) manager(c).createNotificationChannel(NotificationChannel(
-            CHANNEL, (args["channelLabel"] as? String) ?: "Ares conversations", NotificationManager.IMPORTANCE_DEFAULT))
+            channelId, (args["channelLabel"] as? String) ?: "Ares conversations", NotificationManager.IMPORTANCE_DEFAULT))
         val style = NotificationCompat.MessagingStyle(Person.Builder().setName(userLabel).build())
             .setConversationTitle(title).setGroupConversation(false)
-            .addMessage(body, System.currentTimeMillis(), Person.Builder().setName("Ares").setKey("assistant").build())
+            .addMessage(body, System.currentTimeMillis(), sender)
         val replyAction = NotificationCompat.Action.Builder(android.R.drawable.ic_btn_speak_now, replyLabel, reply)
             .addRemoteInput(remote).setAllowGeneratedReplies(true).setShowsUserInterface(false)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY).build()
         val readAction = NotificationCompat.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel, readLabel, read)
             .setShowsUserInterface(false).setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ).build()
-        val car = NotificationCompat.CarExtender.UnreadConversation.Builder("Ares").addMessage(body)
+        val car = NotificationCompat.CarExtender.UnreadConversation.Builder(senderName).addMessage(body)
             .setReadPendingIntent(read).setReplyAction(reply, remote).setLatestTimestamp(System.currentTimeMillis()).build()
-        manager(c).notify(id, NotificationCompat.Builder(c, CHANNEL).setSmallIcon(R.drawable.ic_stat_mobile_push)
+        manager(c).notify(id, NotificationCompat.Builder(c, channelId).setSmallIcon(R.drawable.ic_stat_mobile_push)
             .setContentTitle(title).setContentText(body).setStyle(style).setContentIntent(open)
+            .setLargeIcon(avatarBitmap)
             .setCategory(Notification.CATEGORY_MESSAGE).setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true).addAction(replyAction).addAction(readAction)
             .extend(NotificationCompat.CarExtender().setUnreadConversation(car)).build())

@@ -500,7 +500,15 @@ class _NgMainPageState extends State<_NgMainContent>
     var text = reply?.text.trim() ?? '';
     final failed = chat.lastTurnFailed;
     if (failed && (chat.error?.isNotEmpty ?? false)) text = chat.error!;
-    final title = chat.title.isEmpty ? ngL.ng_hermes_replied : chat.title;
+    final identity = chat.identity;
+    final botName = identity?.isBot == true ? identity!.botName!.trim() : '';
+    final botAvatar = identity?.avatarBytes ??
+        (identity?.profileName == null
+            ? null
+            : _bots?.avatarBytes(identity!.profileName!));
+    final title = botName.isNotEmpty
+        ? botName
+        : (chat.title.isEmpty ? ngL.ng_hermes_replied : chat.title);
     final body = text.isEmpty
         ? (failed ? ngL.ng_the_turn_failed : ngL.ng_the_turn_finished)
         : text.length > 180
@@ -508,6 +516,9 @@ class _NgMainPageState extends State<_NgMainContent>
         : text;
     final scope = NgScope.of(context);
     final connectionId = chat.gateway.connection.id;
+    final botChannel = botName.isEmpty
+        ? null
+        : _botChannel(identity!.profileName ?? botName, botName);
     final conversation =
         identical(chat.gateway, scope.gateway) &&
             ConnectionMutationBarrier.isCurrent(
@@ -538,9 +549,23 @@ class _NgMainPageState extends State<_NgMainContent>
               sessionId: stored,
               connectionId: connectionId,
               conversation: conversation,
+              channel: botChannel,
+              senderName: botName.isEmpty ? null : botName,
+              senderAvatar: botAvatar,
             ),
     );
     if (stored != null) _postedReplies.add(stored);
+  }
+
+  TurnNotificationChannel? _botChannel(String key, String name) {
+    final clean = key.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    if (clean.isEmpty) return null;
+    final bounded = clean.length > 48 ? clean.substring(0, 48) : clean;
+    return TurnNotificationChannel(
+      id: 'hermes_bot_$bounded',
+      name: name,
+      description: 'Notifications from $name',
+    );
   }
 
   void _onBack(bool didPop) {
