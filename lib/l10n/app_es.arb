@@ -1468,7 +1468,8 @@
   "ng_new_group_chat": "Nuevo chat de grupo",
   "ng_group_name": "Nombre del grupo",
   "ng_select_members": "Seleccionar miembros",
-  "ng_delete_this_job": "¿Eliminar esta tarea?",
+
+  "ng_group_member_range": "Elige entre 2 y 6 bots.",  "ng_delete_this_job": "¿Eliminar esta tarea?",
   "ng_it_stops_running_past_runs_stay": "Dejará de ejecutarse. Las ejecuciones anteriores seguirán en tus chats.",
   "ng_next_run": "Próxima ejecución {when}",
   "ng_delivers_to": "Se envía a {target}",

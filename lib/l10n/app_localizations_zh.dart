@@ -5107,6 +5107,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ng_select_members => '选择成员';
 
   @override
+  String get ng_group_member_range => '请选择 2 到 6 个机器人。';
+
+  @override
   String get ng_delete_this_job => '删除此任务？';
 
   @override

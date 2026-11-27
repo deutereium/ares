@@ -5183,6 +5183,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ng_select_members => 'メンバーを選択';
 
   @override
+  String get ng_group_member_range => 'ボットを2〜6体選択してください。';
+
+  @override
   String get ng_delete_this_job => 'このジョブを削除しますか？';
 
   @override

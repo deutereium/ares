@@ -8950,6 +8950,11 @@ abstract class AppLocalizations {
   /// **'Select members'**
   String get ng_select_members;
 
+  /// No description provided for @ng_group_member_range.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick 2 to 6 bots.'**
+  String get ng_group_member_range;
   /// No description provided for @ng_delete_this_job.
   ///
   /// In en, this message translates to:

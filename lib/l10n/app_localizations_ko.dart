@@ -5182,6 +5182,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ng_select_members => '멤버 선택';
 
   @override
+  String get ng_group_member_range => '봇을 2~6개 선택하세요.';
+
+  @override
   String get ng_delete_this_job => '이 작업을 삭제할까요?';
 
   @override

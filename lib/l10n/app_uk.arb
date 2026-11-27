@@ -1621,7 +1621,8 @@
   "ng_new_group_chat": "Новий груповий чат",
   "ng_group_name": "Назва групи",
   "ng_select_members": "Вибрати учасників",
-  "ng_delete_this_job": "Видалити це завдання?",
+
+  "ng_group_member_range": "Виберіть від 2 до 6 ботів.",  "ng_delete_this_job": "Видалити це завдання?",
   "ng_it_stops_running_past_runs_stay": "Воно більше не запускатиметься. Попередні запуски залишаться у ваших чатах.",
   "ng_next_run": "Наступний запуск: {when}",
   "ng_delivers_to": "Надсилає до {target}",

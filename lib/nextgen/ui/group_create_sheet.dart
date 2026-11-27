@@ -5,7 +5,7 @@ import '../nextgen_l10n.dart';
 import '../theme/nextgen_theme.dart';
 import 'widgets.dart';
 
-/// Creates a hosted group chat: a name plus at least one bot member.
+/// Creates a hosted group chat: a name plus two to six bot members.
 Future<String?> showNgGroupCreateSheet(
   BuildContext context, {
   required NgBotsModel model,
@@ -35,9 +35,12 @@ class _NgGroupCreateSheetState extends State<_NgGroupCreateSheet> {
     super.dispose();
   }
 
+  bool get _canCreate =>
+      !_busy && _members.length >= 2 && _members.length <= 6;
+
   Future<void> _create() async {
     final name = _name.text.trim();
-    if (name.isEmpty || _members.isEmpty || _busy) return;
+    if (name.isEmpty || !_canCreate) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -104,6 +107,11 @@ class _NgGroupCreateSheetState extends State<_NgGroupCreateSheet> {
                 ngL.ng_select_members,
                 style: NgType.caption.copyWith(color: c.text2),
               ),
+              const SizedBox(height: 2),
+              Text(
+                ngL.ng_group_member_range,
+                style: NgType.caption.copyWith(color: c.text3),
+              ),
               const SizedBox(height: 4),
               if (bots.isEmpty)
                 Padding(
@@ -139,7 +147,9 @@ class _NgGroupCreateSheetState extends State<_NgGroupCreateSheet> {
                               ? null
                               : (checked) => setState(() {
                                   if (checked == true) {
-                                    _members.add(bot.name);
+                                    if (_members.length < 6) {
+                                      _members.add(bot.name);
+                                    }
                                   } else {
                                     _members.remove(bot.name);
                                   }
@@ -168,7 +178,7 @@ class _NgGroupCreateSheetState extends State<_NgGroupCreateSheet> {
                   const SizedBox(width: 8),
                   FilledButton(
                     key: const Key('ng-group-create-submit'),
-                    onPressed: _busy ? null : _create,
+                    onPressed: _canCreate ? _create : null,
                     child: Text(ngL.ng_create),
                   ),
                 ],

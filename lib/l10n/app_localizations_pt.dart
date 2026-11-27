@@ -5341,6 +5341,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get ng_select_members => 'Selecionar membros';
 
   @override
+  String get ng_group_member_range => 'Escolha de 2 a 6 bots.';
+
+  @override
   String get ng_delete_this_job => 'Eliminar este trabalho?';
 
   @override

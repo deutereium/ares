@@ -495,10 +495,19 @@ class NgBotsModel extends ChangeNotifier {
       throw StateError('A group needs a name.');
     }
     final roomId = 'room-${const Uuid().v4()}';
+    final roster = [
+      for (final member in members)
+        {
+          'member_id': member,
+          'profile': member,
+          'handle': member,
+          'target': {'kind': 'local', 'profile': member},
+        },
+    ];
     final result = await scope.gateway.call('groups.create', {
       'room_id': roomId,
       'name': clean,
-      'members': members,
+      'members': roster,
     });
     await refresh();
     final id = _map(result['room'])['room_id']?.toString().trim() ?? '';

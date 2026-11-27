@@ -5330,6 +5330,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get ng_select_members => 'Вибрати учасників';
 
   @override
+  String get ng_group_member_range => 'Виберіть від 2 до 6 ботів.';
+
+  @override
   String get ng_delete_this_job => 'Видалити це завдання?';
 
   @override

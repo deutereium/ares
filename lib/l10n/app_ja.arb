@@ -1468,7 +1468,8 @@
   "ng_new_group_chat": "新しいグループチャット",
   "ng_group_name": "グループ名",
   "ng_select_members": "メンバーを選択",
-  "ng_delete_this_job": "このジョブを削除しますか？",
+
+  "ng_group_member_range": "ボットを2〜6体選択してください。",  "ng_delete_this_job": "このジョブを削除しますか？",
   "ng_it_stops_running_past_runs_stay": "ジョブは停止します。過去の実行履歴はチャットに残ります。",
   "ng_next_run": "次回の実行 {when}",
   "ng_delivers_to": "配信先: {target}",

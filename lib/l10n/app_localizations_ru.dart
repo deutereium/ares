@@ -5335,6 +5335,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ng_select_members => 'Выбрать участников';
 
   @override
+  String get ng_group_member_range => 'Выберите от 2 до 6 ботов.';
+
+  @override
   String get ng_delete_this_job => 'Удалить эту задачу?';
 
   @override

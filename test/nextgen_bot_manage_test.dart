@@ -369,7 +369,12 @@ void main() {
 
     final create = gateway.callsTo('groups.create').single;
     expect(create['name'], 'Team');
-    expect(create['members'], ['sol', 'nanox']);
+    final roster = create['members'] as List;
+    expect(roster.map((m) => (m as Map)['profile']), ['sol', 'nanox']);
+    expect((roster.first as Map)['target'], {
+      'kind': 'local',
+      'profile': 'sol',
+    });
     expect(create['room_id'], startsWith('room-'));
     expect(id, create['room_id']);
   });
