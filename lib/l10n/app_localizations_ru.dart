@@ -5284,6 +5284,57 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ng_folder => 'Папка';
 
   @override
+  String get ng_kanban => 'Канбан';
+
+  @override
+  String get ng_new_task => 'Новая задача';
+
+  @override
+  String get ng_task_title => 'Заголовок';
+
+  @override
+  String get ng_assignee => 'Исполнитель';
+
+  @override
+  String get ng_priority => 'Приоритет';
+
+  @override
+  String get ng_add_comment => 'Добавить комментарий';
+
+  @override
+  String get ng_no_tasks => 'Нет задач';
+
+  @override
+  String get ng_move_to => 'Переместить в';
+
+  @override
+  String get ng_couldn_t_load_kanban => 'Не удалось загрузить канбан';
+
+  @override
+  String get ng_kanban_triage => 'Триаж';
+
+  @override
+  String get ng_kanban_todo => 'К выполнению';
+
+  @override
+  String get ng_kanban_blocked => 'Заблокировано';
+
+  @override
+  String get ng_kanban_review => 'Проверка';
+
+  @override
+  String get ng_kanban_done => 'Готово';
+
+  @override
+  String get ng_new_group_chat => 'Новый групповой чат';
+
+  @override
+  String get ng_group_name => 'Название группы';
+
+  @override
+  String get ng_select_members => 'Выбрать участников';
+
+  @override
   String get ng_delete_this_job => 'Удалить эту задачу?';
 
   @override

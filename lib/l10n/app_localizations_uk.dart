@@ -5279,6 +5279,57 @@ class AppLocalizationsUk extends AppLocalizations {
   String get ng_folder => 'Тека';
 
   @override
+  String get ng_kanban => 'Канбан';
+
+  @override
+  String get ng_new_task => 'Нове завдання';
+
+  @override
+  String get ng_task_title => 'Заголовок';
+
+  @override
+  String get ng_assignee => 'Виконавець';
+
+  @override
+  String get ng_priority => 'Пріоритет';
+
+  @override
+  String get ng_add_comment => 'Додати коментар';
+
+  @override
+  String get ng_no_tasks => 'Немає завдань';
+
+  @override
+  String get ng_move_to => 'Перемістити до';
+
+  @override
+  String get ng_couldn_t_load_kanban => 'Не вдалося завантажити канбан';
+
+  @override
+  String get ng_kanban_triage => 'Тріаж';
+
+  @override
+  String get ng_kanban_todo => 'До виконання';
+
+  @override
+  String get ng_kanban_blocked => 'Заблоковано';
+
+  @override
+  String get ng_kanban_review => 'Перевірка';
+
+  @override
+  String get ng_kanban_done => 'Готово';
+
+  @override
+  String get ng_new_group_chat => 'Новий груповий чат';
+
+  @override
+  String get ng_group_name => 'Назва групи';
+
+  @override
+  String get ng_select_members => 'Вибрати учасників';
+
+  @override
   String get ng_delete_this_job => 'Видалити це завдання?';
 
   @override

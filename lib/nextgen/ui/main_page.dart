@@ -18,7 +18,9 @@ import '../nextgen_preferences.dart';
 import 'capabilities_page.dart';
 import 'chat_view.dart';
 import 'group_chat_page.dart';
+import 'group_create_sheet.dart';
 import 'insights_page.dart';
+import 'kanban_page.dart';
 import 'more_page.dart';
 import 'nextgen_scope.dart';
 import 'profile_switcher.dart';
@@ -606,10 +608,33 @@ class _NgMainPageState extends State<_NgMainContent>
     _openId(null, '', workingDirectory: cwd);
   }
 
+  Future<void> _newGroupChat() async {
+    _scaffold.currentState?.closeDrawer();
+    final bots = _bots;
+    if (bots == null) return;
+    final roomId = await showNgGroupCreateSheet(context, model: bots);
+    if (!mounted || roomId == null) return;
+    NgGroupChat? created;
+    for (final group in bots.groups) {
+      if (group.roomId == roomId ||
+          group.id == roomId ||
+          group.id == 'canonical:$roomId') {
+        created = group;
+        break;
+      }
+    }
+    if (created == null) {
+      ngToast(context, ngL.ng_try_again);
+      return;
+    }
+    _openGroup(created);
+  }
+
   void _go(NgDestination d) {
     _scaffold.currentState?.closeDrawer();
     final Widget page = switch (d) {
       NgDestination.scheduled => NgScheduledPage(onOpenSession: _open),
+      NgDestination.kanban => const NgKanbanPage(),
       NgDestination.insights => const NgInsightsPage(),
       NgDestination.capabilities => const NgCapabilitiesPage(),
       NgDestination.archived => NgArchivedPage(onOpenSession: _open),
@@ -692,6 +717,7 @@ class _NgMainPageState extends State<_NgMainContent>
           currentSessionId: chat?.storedId,
           onOpen: _open,
           onNewChat: _newChat,
+          onNewGroupChat: _newGroupChat,
           onDestination: _go,
           onOpenBot: _openBot,
           onOpenGroup: _openGroup,

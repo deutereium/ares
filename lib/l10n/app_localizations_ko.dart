@@ -5131,6 +5131,57 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ng_folder => '폴더';
 
   @override
+  String get ng_kanban => '칸반';
+
+  @override
+  String get ng_new_task => '새 작업';
+
+  @override
+  String get ng_task_title => '제목';
+
+  @override
+  String get ng_assignee => '담당자';
+
+  @override
+  String get ng_priority => '우선순위';
+
+  @override
+  String get ng_add_comment => '댓글 추가';
+
+  @override
+  String get ng_no_tasks => '작업 없음';
+
+  @override
+  String get ng_move_to => '이동';
+
+  @override
+  String get ng_couldn_t_load_kanban => '칸반을 불러올 수 없음';
+
+  @override
+  String get ng_kanban_triage => '분류';
+
+  @override
+  String get ng_kanban_todo => '할 일';
+
+  @override
+  String get ng_kanban_blocked => '차단됨';
+
+  @override
+  String get ng_kanban_review => '검토';
+
+  @override
+  String get ng_kanban_done => '완료';
+
+  @override
+  String get ng_new_group_chat => '새 그룹 채팅';
+
+  @override
+  String get ng_group_name => '그룹 이름';
+
+  @override
+  String get ng_select_members => '멤버 선택';
+
+  @override
   String get ng_delete_this_job => '이 작업을 삭제할까요?';
 
   @override

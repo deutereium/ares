@@ -3311,6 +3311,41 @@ class DashboardClient {
     return _decodeMapResponse(res);
   }
 
+  Future<Map<String, dynamic>> apiPatch(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    Map<String, String>? queryParameters,
+    bool retried = false,
+    Duration timeout = ApiClient.requestTimeout,
+  }) async {
+    final authGeneration = _authGeneration;
+    final headers = await _authHeaders();
+    final uri = Uri.parse(
+      '$_baseUrl/api/$endpoint',
+    ).replace(queryParameters: queryParameters);
+    final res = await _http
+        .patch(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        )
+        .timeout(timeout);
+    if (res.statusCode == 401 && !retried) {
+      _resetAuth(ifGeneration: authGeneration);
+      return apiPatch(
+        endpoint,
+        body: body,
+        queryParameters: queryParameters,
+        retried: true,
+        timeout: timeout,
+      );
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('HTTP ${res.statusCode}');
+    }
+    return _decodeMapResponse(res);
+  }
+
   Future<void> apiDelete(
     String endpoint, {
     Map<String, String>? queryParameters,

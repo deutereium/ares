@@ -5132,6 +5132,57 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ng_folder => 'フォルダー';
 
   @override
+  String get ng_kanban => 'かんばん';
+
+  @override
+  String get ng_new_task => '新しいタスク';
+
+  @override
+  String get ng_task_title => 'タイトル';
+
+  @override
+  String get ng_assignee => '担当者';
+
+  @override
+  String get ng_priority => '優先度';
+
+  @override
+  String get ng_add_comment => 'コメントを追加';
+
+  @override
+  String get ng_no_tasks => 'タスクなし';
+
+  @override
+  String get ng_move_to => '移動先';
+
+  @override
+  String get ng_couldn_t_load_kanban => 'かんばんを読み込めません';
+
+  @override
+  String get ng_kanban_triage => 'トリアージ';
+
+  @override
+  String get ng_kanban_todo => '未着手';
+
+  @override
+  String get ng_kanban_blocked => 'ブロック';
+
+  @override
+  String get ng_kanban_review => 'レビュー';
+
+  @override
+  String get ng_kanban_done => '完了';
+
+  @override
+  String get ng_new_group_chat => '新しいグループチャット';
+
+  @override
+  String get ng_group_name => 'グループ名';
+
+  @override
+  String get ng_select_members => 'メンバーを選択';
+
+  @override
   String get ng_delete_this_job => 'このジョブを削除しますか？';
 
   @override

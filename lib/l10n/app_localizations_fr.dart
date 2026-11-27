@@ -5299,6 +5299,57 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ng_folder => 'Dossier';
 
   @override
+  String get ng_kanban => 'Kanban';
+
+  @override
+  String get ng_new_task => 'Nouvelle tâche';
+
+  @override
+  String get ng_task_title => 'Titre';
+
+  @override
+  String get ng_assignee => 'Assigné à';
+
+  @override
+  String get ng_priority => 'Priorité';
+
+  @override
+  String get ng_add_comment => 'Ajouter un commentaire';
+
+  @override
+  String get ng_no_tasks => 'Aucune tâche';
+
+  @override
+  String get ng_move_to => 'Déplacer vers';
+
+  @override
+  String get ng_couldn_t_load_kanban => 'Impossible de charger Kanban';
+
+  @override
+  String get ng_kanban_triage => 'Triage';
+
+  @override
+  String get ng_kanban_todo => 'À faire';
+
+  @override
+  String get ng_kanban_blocked => 'Bloqué';
+
+  @override
+  String get ng_kanban_review => 'Révision';
+
+  @override
+  String get ng_kanban_done => 'Terminé';
+
+  @override
+  String get ng_new_group_chat => 'Nouveau chat de groupe';
+
+  @override
+  String get ng_group_name => 'Nom du groupe';
+
+  @override
+  String get ng_select_members => 'Sélectionner des membres';
+
+  @override
   String get ng_delete_this_job => 'Supprimer cette tâche ?';
 
   @override

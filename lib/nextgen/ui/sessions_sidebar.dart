@@ -32,6 +32,7 @@ enum NgChatAttention { waiting, finished, updates, none }
 
 enum NgDestination {
   scheduled,
+  kanban,
   insights,
   capabilities,
   archived,
@@ -466,6 +467,7 @@ class NgSessionsSidebar extends StatefulWidget {
     required this.onOpen,
     required this.onNewChat,
     required this.onDestination,
+    this.onNewGroupChat,
     this.bots,
     this.onOpenBot,
     this.onOpenGroup,
@@ -478,6 +480,9 @@ class NgSessionsSidebar extends StatefulWidget {
   final ValueChanged<Session> onOpen;
   final VoidCallback onNewChat;
   final ValueChanged<NgDestination> onDestination;
+
+  /// Offered beside New chat while the Bots tab is showing.
+  final Future<void> Function()? onNewGroupChat;
   final NgBotsModel? bots;
   final ValueChanged<NgBot>? onOpenBot;
   final ValueChanged<NgGroupChat>? onOpenGroup;
@@ -514,6 +519,42 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
     _scroll.addListener(() {
       if (_scroll.position.extentAfter < 400) widget.model.loadMore();
     });
+  }
+
+  Future<void> _newChatPressed() async {
+    final createGroup = widget.onNewGroupChat;
+    if (_tab != NgSidebarTab.bots || createGroup == null) {
+      widget.onNewChat();
+      return;
+    }
+    final choice = await showNgSheet<String>(
+      context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('ng-new-chat-option'),
+              leading: const Icon(Icons.edit_square),
+              title: Text(ngL.ng_new_chat),
+              onTap: () => Navigator.of(ctx).pop('chat'),
+            ),
+            ListTile(
+              key: const Key('ng-new-group-option'),
+              leading: const Icon(Icons.group_add_outlined),
+              title: Text(ngL.ng_new_group_chat),
+              onTap: () => Navigator.of(ctx).pop('group'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'group') {
+      await createGroup();
+    } else {
+      widget.onNewChat();
+    }
   }
 
   @override
@@ -1003,23 +1044,28 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
           children: [
             tile(Icons.schedule, ngL.ng_scheduled, NgDestination.scheduled),
             tile(
+              Icons.view_kanban_outlined,
+              ngL.ng_kanban,
+              NgDestination.kanban,
+            ),
+            tile(
               Icons.insights_outlined,
               ngL.ng_insights,
               NgDestination.insights,
             ),
             tile(
-              Icons.extension_outlined,
-              ngL.ng_capabilities,
-              NgDestination.capabilities,
+              Icons.archive_outlined,
+              ngL.ng_archived,
+              NgDestination.archived,
             ),
           ],
         ),
         Row(
           children: [
             tile(
-              Icons.archive_outlined,
-              ngL.ng_archived,
-              NgDestination.archived,
+              Icons.extension_outlined,
+              ngL.ng_capabilities,
+              NgDestination.capabilities,
             ),
             tile(Icons.apps, ngL.ng_more, NgDestination.more),
             tile(
@@ -1292,7 +1338,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
               foregroundColor: c.onAccent,
               shape: const StadiumBorder(),
             ),
-            onPressed: widget.onNewChat,
+            onPressed: _newChatPressed,
             icon: const Icon(Icons.edit_square, size: 18),
             label: Text(ngL.ng_new_chat),
           ),

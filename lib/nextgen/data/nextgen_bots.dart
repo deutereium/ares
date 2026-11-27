@@ -488,6 +488,23 @@ class NgBotsModel extends ChangeNotifier {
     await refresh();
   }
 
+  /// Creates a hosted room and returns its room id after the roster refresh.
+  Future<String> createGroup(String name, List<String> members) async {
+    final clean = name.trim();
+    if (clean.isEmpty) {
+      throw StateError('A group needs a name.');
+    }
+    final roomId = 'room-${const Uuid().v4()}';
+    final result = await scope.gateway.call('groups.create', {
+      'room_id': roomId,
+      'name': clean,
+      'members': members,
+    });
+    await refresh();
+    final id = _map(result['room'])['room_id']?.toString().trim() ?? '';
+    return id.isEmpty ? roomId : id;
+  }
+
   /// Deletes a room. Hosted rooms are disbanded; a mirrored room becomes a
   /// tombstone in the mirror so every client drops it.
   Future<void> deleteGroup(NgGroupChat group) async {

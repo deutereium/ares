@@ -8848,6 +8848,108 @@ abstract class AppLocalizations {
   /// **'Folder'**
   String get ng_folder;
 
+  /// No description provided for @ng_kanban.
+  ///
+  /// In en, this message translates to:
+  /// **'Kanban'**
+  String get ng_kanban;
+
+  /// No description provided for @ng_new_task.
+  ///
+  /// In en, this message translates to:
+  /// **'New task'**
+  String get ng_new_task;
+
+  /// No description provided for @ng_task_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get ng_task_title;
+
+  /// No description provided for @ng_assignee.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignee'**
+  String get ng_assignee;
+
+  /// No description provided for @ng_priority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get ng_priority;
+
+  /// No description provided for @ng_add_comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Add comment'**
+  String get ng_add_comment;
+
+  /// No description provided for @ng_no_tasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks'**
+  String get ng_no_tasks;
+
+  /// No description provided for @ng_move_to.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to'**
+  String get ng_move_to;
+
+  /// No description provided for @ng_couldn_t_load_kanban.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load Kanban'**
+  String get ng_couldn_t_load_kanban;
+
+  /// No description provided for @ng_kanban_triage.
+  ///
+  /// In en, this message translates to:
+  /// **'Triage'**
+  String get ng_kanban_triage;
+
+  /// No description provided for @ng_kanban_todo.
+  ///
+  /// In en, this message translates to:
+  /// **'To do'**
+  String get ng_kanban_todo;
+
+  /// No description provided for @ng_kanban_blocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get ng_kanban_blocked;
+
+  /// No description provided for @ng_kanban_review.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get ng_kanban_review;
+
+  /// No description provided for @ng_kanban_done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get ng_kanban_done;
+
+  /// No description provided for @ng_new_group_chat.
+  ///
+  /// In en, this message translates to:
+  /// **'New group chat'**
+  String get ng_new_group_chat;
+
+  /// No description provided for @ng_group_name.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name'**
+  String get ng_group_name;
+
+  /// No description provided for @ng_select_members.
+  ///
+  /// In en, this message translates to:
+  /// **'Select members'**
+  String get ng_select_members;
+
   /// No description provided for @ng_delete_this_job.
   ///
   /// In en, this message translates to:

@@ -350,6 +350,30 @@ void main() {
     expect(rename['event_id'], isNotEmpty);
   });
 
+  test('createGroup posts a room id, name and members', () async {
+    await seed(_row());
+    gateway.onCall = (method, params) async => switch (method) {
+      'profiles.list' => {'profiles': [_row()]},
+      'groups.list' => {'rooms': []},
+      'groups.create' => {
+        'room': {
+          'room_id': params['room_id'],
+          'name': params['name'],
+          'members': params['members'],
+        },
+      },
+      _ => <String, dynamic>{},
+    };
+
+    final id = await model.createGroup('  Team  ', ['sol', 'nanox']);
+
+    final create = gateway.callsTo('groups.create').single;
+    expect(create['name'], 'Team');
+    expect(create['members'], ['sol', 'nanox']);
+    expect(create['room_id'], startsWith('room-'));
+    expect(id, create['room_id']);
+  });
+
   test('deleteGroup disbands a hosted room', () async {
     await seed(_row());
     gateway.onCall = (method, params) async => switch (method) {
