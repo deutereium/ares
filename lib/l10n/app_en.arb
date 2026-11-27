@@ -2115,6 +2115,9 @@
   "ng_group_name": "Group name",
   "ng_select_members": "Select members",
 
+  "ng_completion_note": "Completion note",
+  "ng_completion_note_hint": "What was done? The gateway records this as the card's result.",
+  "ng_place_in": "Place in",
   "ng_group_member_range": "Pick 2 to 6 bots.",  "ng_delete_this_job": "Delete this job?",
   "ng_it_stops_running_past_runs_stay": "It stops running. Past runs stay in your chats.",
   "ng_next_run": "Next run {when}",

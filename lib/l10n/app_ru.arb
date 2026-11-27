@@ -1469,6 +1469,9 @@
   "ng_group_name": "Название группы",
   "ng_select_members": "Выбрать участников",
 
+  "ng_completion_note": "Заметка о завершении",
+  "ng_completion_note_hint": "Что было сделано? Шлюз сохранит это как результат карточки.",
+  "ng_place_in": "Поместить в",
   "ng_group_member_range": "Выберите от 2 до 6 ботов.",  "ng_delete_this_job": "Удалить эту задачу?",
   "ng_it_stops_running_past_runs_stay": "Задача перестанет выполняться. Прошлые запуски останутся в чатах.",
   "ng_next_run": "Следующий запуск: {when}",

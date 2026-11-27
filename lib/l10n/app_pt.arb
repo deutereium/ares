@@ -1469,6 +1469,9 @@
   "ng_group_name": "Nome do grupo",
   "ng_select_members": "Selecionar membros",
 
+  "ng_completion_note": "Nota de conclusão",
+  "ng_completion_note_hint": "O que foi feito? O gateway registra como resultado do cartão.",
+  "ng_place_in": "Colocar em",
   "ng_group_member_range": "Escolha de 2 a 6 bots.",  "ng_delete_this_job": "Eliminar este trabalho?",
   "ng_it_stops_running_past_runs_stay": "Deixará de ser executado. As execuções anteriores continuam nas conversas.",
   "ng_next_run": "Próxima execução {when}",

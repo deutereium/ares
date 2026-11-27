@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../ui/nextgen_scope.dart';
+import 'ng_avatar_cache.dart';
 
 class NgBot {
   const NgBot({
@@ -19,6 +20,8 @@ class NgBot {
     required this.preview,
     required this.lastActiveMs,
     required this.hasAvatar,
+    this.canonicalActiveMs = 0,
+    this.lastSessionActiveMs = 0,
     this.sessionId,
     this.sessionTitle,
     this.model,
@@ -33,6 +36,17 @@ class NgBot {
   final String preview;
   final int lastActiveMs;
   final bool hasAvatar;
+
+  /// The canonical "Bot Chat" activity, which hidden deliveries touch.
+  final int canonicalActiveMs;
+
+  /// Activity of the newest ordinary session on the bot's profile.
+  final int lastSessionActiveMs;
+
+  /// The clock the unread watermark follows: the canonical chat when there is
+  /// one, otherwise the newest ordinary session.
+  int get activityMs =>
+      canonicalActiveMs > 0 ? canonicalActiveMs : lastSessionActiveMs;
   final String? sessionId;
   final String? sessionTitle;
   final String? model;
@@ -112,6 +126,11 @@ class NgBotsModel extends ChangeNotifier {
   List<NgGroupChat> _groups = const [];
   final Map<String, Uint8List> _avatars = {};
   final Set<String> _avatarRequests = {};
+  final Map<String, int> _watermarks = {};
+  final Set<String> _unread = {};
+  bool _unreadSeeded = false;
+  String? _activeBot;
+  bool paused = false;
   String _query = '';
   bool _loading = false;
   String? _error;
@@ -176,7 +195,8 @@ class NgBotsModel extends ChangeNotifier {
     // A pane calls this from initState. Let the current build finish before
     // refresh() flips loading and notifies listeners.
     unawaited(Future<void>.microtask(refresh));
-    _poll = Timer.periodic(const Duration(seconds: 5), (_) {
+    _poll = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (paused) return;
       unawaited(refresh());
     });
   }
@@ -198,6 +218,10 @@ class NgBotsModel extends ChangeNotifier {
     _groups = const [];
     _avatars.clear();
     _avatarRequests.clear();
+    _watermarks.clear();
+    _unread.clear();
+    _unreadSeeded = false;
+    _activeBot = null;
     _error = null;
     scope = next;
     notifyListeners();
@@ -259,10 +283,15 @@ class NgBotsModel extends ChangeNotifier {
       } catch (_) {
         // Older gateways have no hosted rooms; the mirrored rooms still work.
       }
+      _trackUnread();
       for (final bot in _bots) {
-        if (bot.hasAvatar && !_avatars.containsKey(bot.name)) {
-          unawaited(loadAvatar(bot));
+        if (!bot.hasAvatar) {
+          if (_avatars.remove(bot.name) != null) notifyListeners();
+          unawaited(NgAvatarCache.remove(scope.connection.id, bot.name));
+          continue;
         }
+        if (_avatars.containsKey(bot.name)) continue;
+        unawaited(_hydrateAvatar(bot));
       }
     } catch (e) {
       _error = '$e';
@@ -280,6 +309,10 @@ class NgBotsModel extends ChangeNotifier {
     final last = _map(row['last_session']);
     final worker = _map(row['worker_session']);
     final previewSource = canonical.isNotEmpty ? canonical : last;
+    final canonicalMs = canonical.isNotEmpty
+        ? _seconds(canonical['last_active'])
+        : 0;
+    final lastSessionMs = last.isNotEmpty ? _seconds(last['last_active']) : 0;
     final lastMs = [
       _seconds(previewSource['last_active']),
       _seconds(worker['last_active']),
@@ -301,6 +334,8 @@ class NgBotsModel extends ChangeNotifier {
       preview: preview,
       lastActiveMs: lastMs,
       hasAvatar: row['has_avatar'] == true,
+      canonicalActiveMs: canonicalMs,
+      lastSessionActiveMs: lastSessionMs,
       sessionId:
           canonical['resolved_id']?.toString() ?? canonical['id']?.toString(),
       sessionTitle: canonical['title']?.toString(),
@@ -376,6 +411,7 @@ class NgBotsModel extends ChangeNotifier {
         'clear': true,
       });
       _avatars.remove(name);
+      unawaited(NgAvatarCache.remove(scope.connection.id, name));
     } else if (avatarBytes != null) {
       await scope.gateway.call('profiles.set_asset', {
         'name': name,
@@ -383,6 +419,7 @@ class NgBotsModel extends ChangeNotifier {
         'data': 'data:$mime;base64,${base64Encode(avatarBytes)}',
       });
       _avatars[name] = avatarBytes;
+      unawaited(NgAvatarCache.write(scope.connection.id, name, avatarBytes));
     }
 
     // Desktop files a bot by a stable folder id and shows the name; both live
@@ -700,6 +737,7 @@ class NgBotsModel extends ChangeNotifier {
       if (comma < 0 || comma + 1 >= data.length) return null;
       final bytes = base64Decode(data.substring(comma + 1));
       _avatars[bot.name] = bytes;
+      unawaited(NgAvatarCache.write(scope.connection.id, bot.name, bytes));
       notifyListeners();
       return bytes;
     } catch (_) {
@@ -710,4 +748,51 @@ class NgBotsModel extends ChangeNotifier {
   }
 
   Uint8List? avatarBytes(String name) => _avatars[name];
+
+  Future<void> _hydrateAvatar(NgBot bot) async {
+    final cached = await NgAvatarCache.read(scope.connection.id, bot.name);
+    if (cached != null) {
+      if (!_bots.any((b) => b.name == bot.name && b.hasAvatar)) return;
+      _avatars[bot.name] = cached;
+      notifyListeners();
+      return;
+    }
+    await loadAvatar(bot);
+  }
+
+  /// Marks bots whose canonical chat moved past its watermark. The first pass
+  /// after a scope settles only seeds the watermarks, so a fresh launch does
+  /// not replay a bot's whole history as unread.
+  void _trackUnread() {
+    final seeding = !_unreadSeeded;
+    _unreadSeeded = true;
+    for (final bot in _bots) {
+      final ts = bot.activityMs;
+      final prev = _watermarks[bot.name] ?? 0;
+      if (ts > prev) _watermarks[bot.name] = ts;
+      if (seeding || ts <= prev || bot.name == _activeBot) continue;
+      _unread.add(bot.name);
+    }
+  }
+
+  /// The chat on screen: its activity is visible, so opening it clears the
+  /// mark and moves the watermark to what the list already shows.
+  void setActiveBot(String? name) {
+    if (_activeBot == name) return;
+    _activeBot = name;
+    if (name != null) {
+      _unread.remove(name);
+      for (final bot in _bots) {
+        if (bot.name != name) continue;
+        final ts = bot.activityMs;
+        if (ts > (_watermarks[name] ?? 0)) _watermarks[name] = ts;
+        break;
+      }
+    }
+    notifyListeners();
+  }
+
+  bool isBotUnread(String name) => _unread.contains(name);
+
+  int get unreadBotCount => _unread.length;
 }

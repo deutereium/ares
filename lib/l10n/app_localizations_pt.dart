@@ -5341,6 +5341,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get ng_select_members => 'Selecionar membros';
 
   @override
+  String get ng_completion_note => 'Nota de conclusão';
+
+  @override
+  String get ng_completion_note_hint => 'O que foi feito? O gateway registra como resultado do cartão.';
+
+  @override
+  String get ng_place_in => 'Colocar em';
+
+  @override
   String get ng_group_member_range => 'Escolha de 2 a 6 bots.';
 
   @override

@@ -453,4 +453,60 @@ void main() {
     expect(mirror['deleted']['room-a'], isTrue);
     expect((mirror['rooms'] as Map).containsKey('room-a'), isFalse);
   });
+
+  Map<String, dynamic> activityRow(
+    String name, {
+    int canonicalAt = 0,
+    int lastAt = 0,
+  }) {
+    final row = _row(name: name);
+    if (canonicalAt > 0) {
+      row['canonical_session'] = {
+        'id': 'canonical-$name',
+        'last_active': canonicalAt,
+      };
+    }
+    if (lastAt > 0) {
+      row['last_session'] = {'id': 'last-$name', 'last_active': lastAt};
+    }
+    return row;
+  }
+
+  Future<void> seedMany(List<Map<String, dynamic>> rows) async {
+    gateway.onCall = (method, params) async => switch (method) {
+      'profiles.list' => {'profiles': rows},
+      'groups.list' => {'rooms': []},
+      _ => <String, dynamic>{},
+    };
+    await model.refresh();
+  }
+
+  test('activity past the watermark marks a bot unread until it is opened',
+      () async {
+    await seedMany([activityRow('sol', canonicalAt: 100)]);
+    expect(model.isBotUnread('sol'), isFalse);
+
+    await seedMany([activityRow('sol', canonicalAt: 200)]);
+    expect(model.isBotUnread('sol'), isTrue);
+    expect(model.unreadBotCount, 1);
+
+    model.setActiveBot('sol');
+    expect(model.isBotUnread('sol'), isFalse);
+
+    // While its chat is open the badge never comes back.
+    await seedMany([activityRow('sol', canonicalAt: 300)]);
+    expect(model.isBotUnread('sol'), isFalse);
+
+    // Leaving the chat makes the next activity news again.
+    model.setActiveBot(null);
+    await seedMany([activityRow('sol', canonicalAt: 400)]);
+    expect(model.isBotUnread('sol'), isTrue);
+  });
+
+  test('without a canonical chat the newest session is the clock', () async {
+    await seedMany([activityRow('sol', lastAt: 100)]);
+    expect(model.isBotUnread('sol'), isFalse);
+    await seedMany([activityRow('sol', lastAt: 150)]);
+    expect(model.isBotUnread('sol'), isTrue);
+  });
 }

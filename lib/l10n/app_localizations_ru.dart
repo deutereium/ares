@@ -5335,6 +5335,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ng_select_members => 'Выбрать участников';
 
   @override
+  String get ng_completion_note => 'Заметка о завершении';
+
+  @override
+  String get ng_completion_note_hint => 'Что было сделано? Шлюз сохранит это как результат карточки.';
+
+  @override
+  String get ng_place_in => 'Поместить в';
+
+  @override
   String get ng_group_member_range => 'Выберите от 2 до 6 ботов.';
 
   @override

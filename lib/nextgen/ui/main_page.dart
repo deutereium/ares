@@ -127,6 +127,7 @@ class _NgMainPageState extends State<_NgMainContent>
     if (sessions == null) {
       _sessions = NgSessionsModel(scope);
       _bots = NgBotsModel(scope);
+      _bots!.startPolling();
       unawaited(_sessions!.refresh());
       final last =
           _takeOpenRequest(scope.connection.id) ??
@@ -154,6 +155,7 @@ class _NgMainPageState extends State<_NgMainContent>
     }
     // Pause socket-driven session list refreshes while backgrounded.
     _sessions?.paused = !_foreground;
+    _bots?.paused = !_foreground;
     if (!_foreground && wasForeground) {
       // A question that came in while in sight still needs its notification
       // now that the app isn't — if the server still waits on it.
@@ -172,6 +174,7 @@ class _NgMainPageState extends State<_NgMainContent>
       final scope = NgScope.of(context);
       if (!scope.gateway.state.isConnected) scope.gateway.retry();
       unawaited(_sessions?.refresh());
+      unawaited(_bots?.refresh());
     }
   }
 
@@ -195,6 +198,7 @@ class _NgMainPageState extends State<_NgMainContent>
     // chat on another profile is a different chat from an ordinary one with
     // the same stored id, so the profile is part of the key.
     final cacheKey = id == null ? null : _cacheKey(id, sessionProfile);
+    _bots?.setActiveBot(sessionProfile);
     NgChatController? cached;
     if (cacheKey != null && _cache.containsKey(cacheKey)) {
       cached = _cache.remove(cacheKey);

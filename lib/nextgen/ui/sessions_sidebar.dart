@@ -967,6 +967,8 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   Widget _tabToggle(NgColors c) {
     Widget tab(NgSidebarTab value, String label) {
       final selected = _tab == value;
+      final showDot =
+          value == NgSidebarTab.bots && (_bots?.unreadBotCount ?? 0) > 0;
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
@@ -982,11 +984,30 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             color: selected ? c.thumb : Colors.transparent,
             borderRadius: BorderRadius.circular(NgRadii.full),
           ),
-          child: Text(
-            label,
-            style: NgType.caption.copyWith(
-              color: selected ? c.text : c.text3,
-            ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Text(
+                label,
+                style: NgType.caption.copyWith(
+                  color: selected ? c.text : c.text3,
+                ),
+              ),
+              if (showDot)
+                Positioned(
+                  right: -5,
+                  top: -3,
+                  child: Container(
+                    key: const Key('ng-bots-unread-dot'),
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: c.accentText,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       );

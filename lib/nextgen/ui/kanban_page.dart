@@ -62,8 +62,18 @@ class _NgKanbanPageState extends State<NgKanbanPage> {
   }
 
   Future<void> _move(NgKanbanTask task, String status) async {
+    var note = '';
+    if (status == 'done' && _needsCompletionNote(task)) {
+      final entered = await _askCompletionNote(context);
+      if (!mounted || entered == null) return;
+      note = entered;
+    }
     try {
-      await _model.moveTask(task.id, status);
+      await _model.moveTask(
+        task.id,
+        status,
+        summary: note.isEmpty ? null : note,
+      );
     } catch (e) {
       if (!mounted) return;
       ngToast(context, _readable(e));
@@ -162,6 +172,18 @@ String _readable(Object error) {
   final text = '$error';
   return text.startsWith('Exception: ') ? text.substring(11) : text;
 }
+
+/// A card with no stored result cannot complete without a human's note: the
+/// gateway refuses an evidence-free completion. Review approval is exempt.
+bool _needsCompletionNote(NgKanbanTask task) =>
+    task.status != 'review' &&
+    (task.result == null || task.result!.trim().isEmpty);
+
+Future<String?> _askCompletionNote(BuildContext context) =>
+    showNgSheet<String>(
+      context,
+      builder: (_) => const _CompletionNoteSheet(),
+    );
 
 String _ago(int? since, int now) {
   if (since == null || since <= 0) return '';
@@ -386,9 +408,20 @@ class _NgKanbanTaskPageState extends State<_NgKanbanTaskPage> {
   }
 
   Future<void> _move(String status) async {
+    final task = _detail?.task ?? widget.task;
+    var note = '';
+    if (status == 'done' && _needsCompletionNote(task)) {
+      final entered = await _askCompletionNote(context);
+      if (!mounted || entered == null) return;
+      note = entered;
+    }
     setState(() => _busy = true);
     try {
-      await widget.model.moveTask(widget.task.id, status);
+      await widget.model.moveTask(
+        widget.task.id,
+        status,
+        summary: note.isEmpty ? null : note,
+      );
       await _load();
       if (!mounted) return;
       ngToast(context, _statusLabel(status));
@@ -421,6 +454,7 @@ class _NgKanbanTaskPageState extends State<_NgKanbanTaskPage> {
     final c = NgColors.of(context);
     final detail = _detail;
     final task = detail?.task ?? widget.task;
+    final blockReason = detail?.blockReason;
     final targets = ngKanbanMoveTargets(task.status);
     return NgPage(
       title: task.title.isEmpty ? task.id : task.title,
@@ -492,6 +526,39 @@ class _NgKanbanTaskPageState extends State<_NgKanbanTaskPage> {
               ],
             ),
           ),
+          if (task.status == 'blocked') ...[
+            const SizedBox(height: 14),
+            NgCard(
+              color: c.danger.withValues(alpha: 0.10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.block, size: 18, color: c.danger),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task.blockKind == null
+                              ? ngL.ng_kanban_blocked
+                              : '${ngL.ng_kanban_blocked} · ${task.blockKind}',
+                          style: NgType.label.copyWith(color: c.danger),
+                        ),
+                        if (blockReason != null) ...[
+                          const SizedBox(height: 4),
+                          SelectableText(
+                            blockReason,
+                            style: NgType.bodySmall.copyWith(color: c.text),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (task.body != null) ...[
             const SizedBox(height: 14),
             NgCard(
@@ -599,6 +666,7 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
   final _body = TextEditingController();
   String _assignee = '';
   int _priority = 0;
+  String _placement = 'todo';
   bool _busy = false;
 
   @override
@@ -618,6 +686,7 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
         body: _body.text,
         assignee: _assignee.isEmpty ? null : _assignee,
         priority: _priority,
+        placement: _placement,
       );
       if (!mounted) return;
       Navigator.of(context).pop(task);
@@ -717,6 +786,29 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Text(
+                ngL.ng_place_in,
+                style: NgType.caption.copyWith(color: c.text2),
+              ),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(
+                    value: 'triage',
+                    label: Text(ngL.ng_kanban_triage),
+                  ),
+                  ButtonSegment(
+                    value: 'todo',
+                    label: Text(ngL.ng_kanban_todo),
+                  ),
+                  ButtonSegment(value: 'ready', label: Text(ngL.ng_ready)),
+                ],
+                selected: {_placement},
+                onSelectionChanged: _busy
+                    ? null
+                    : (values) => setState(() => _placement = values.first),
+              ),
               const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -768,4 +860,90 @@ class _NewTaskSheetState extends State<_NewTaskSheet> {
     enabled: !_busy,
     decoration: _decoration(c, label),
   );
+}
+
+/// The gateway refuses to complete a card that has no stored result unless the
+/// person doing it leaves a note, so this sheet supplies that record.
+class _CompletionNoteSheet extends StatefulWidget {
+  const _CompletionNoteSheet();
+
+  @override
+  State<_CompletionNoteSheet> createState() => _CompletionNoteSheetState();
+}
+
+class _CompletionNoteSheetState extends State<_CompletionNoteSheet> {
+  final _note = TextEditingController();
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    final canSave = _note.text.trim().isNotEmpty;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          4,
+          16,
+          MediaQuery.viewInsetsOf(context).bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              ngL.ng_completion_note,
+              style: NgType.title.copyWith(color: c.text),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              ngL.ng_completion_note_hint,
+              style: NgType.caption.copyWith(color: c.text3),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('ng-kanban-done-note'),
+              controller: _note,
+              autofocus: true,
+              minLines: 2,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: c.input,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(NgRadii.md),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(ngL.ng_cancel),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const Key('ng-kanban-done-confirm'),
+                  onPressed: canSave
+                      ? () => Navigator.of(context).pop(_note.text.trim())
+                      : null,
+                  child: Text(ngL.ng_kanban_done),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

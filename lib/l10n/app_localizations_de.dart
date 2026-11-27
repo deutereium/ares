@@ -5345,6 +5345,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ng_select_members => 'Mitglieder auswählen';
 
   @override
+  String get ng_completion_note => 'Abschlussnotiz';
+
+  @override
+  String get ng_completion_note_hint => 'Was wurde erledigt? Das Gateway speichert es als Ergebnis der Karte.';
+
+  @override
+  String get ng_place_in => 'Ablegen in';
+
+  @override
   String get ng_group_member_range => 'Wähle 2 bis 6 Bots.';
 
   @override

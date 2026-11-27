@@ -25,6 +25,16 @@ const Set<String> ngKanbanLockedTargets = <String>{
   'archived',
 };
 
+/// Columns a new task can be filed into from the create sheet.
+const List<String> ngKanbanPlacements = <String>['triage', 'todo', 'ready'];
+
+/// Events whose payload carries the reason a card stopped.
+const Set<String> ngKanbanBlockingEvents = <String>{
+  'blocked',
+  'block_loop_detected',
+  'dependency_wait',
+};
+
 /// Manual transitions the gateway accepts, mirrored from the plugin's
 /// `DEFAULT_WORKFLOW` manual map. It is a client-side hint: the server is the
 /// authority and still refuses an invalid move with a readable 409.
@@ -88,6 +98,10 @@ class NgKanbanTask {
     this.currentRunStartedAt,
     this.createdAt,
     this.completedAt,
+    this.result,
+    this.blockKind,
+    this.blockRecurrences = 0,
+    this.lastFailureError,
     this.archived = false,
     this.raw = const <String, dynamic>{},
   });
@@ -106,6 +120,10 @@ class NgKanbanTask {
   final int? currentRunStartedAt;
   final int? createdAt;
   final int? completedAt;
+  final String? result;
+  final String? blockKind;
+  final int blockRecurrences;
+  final String? lastFailureError;
   final bool archived;
 
   /// The server card, kept so the detail page can show fields this model does
@@ -136,6 +154,10 @@ class NgKanbanTask {
       currentRunStartedAt: _int(json['current_run_started_at']),
       createdAt: _int(json['created_at']),
       completedAt: _int(json['completed_at']),
+      result: _text(json['result']),
+      blockKind: _text(json['block_kind']),
+      blockRecurrences: _int(json['block_recurrences']) ?? 0,
+      lastFailureError: _text(json['last_failure_error']),
       archived: json['archived'] == true ||
           (json['status']?.toString() == 'archived'),
       raw: json,
@@ -226,17 +248,57 @@ class NgKanbanComment {
       );
 }
 
+class NgKanbanEvent {
+  const NgKanbanEvent({required this.kind, this.reason, this.createdAt = 0});
+
+  final String kind;
+  final String? reason;
+  final int createdAt;
+
+  factory NgKanbanEvent.fromJson(Map<String, dynamic> json) {
+    final payload = _map(json['payload']);
+    return NgKanbanEvent(
+      kind: (json['kind']?.toString() ?? '').trim(),
+      reason:
+          _text(payload['reason']) ??
+          _text(payload['message']) ??
+          _text(payload['error']) ??
+          _text(payload['detail']),
+      createdAt: _int(json['created_at']) ?? 0,
+    );
+  }
+}
+
 class NgKanbanDetail {
-  const NgKanbanDetail({required this.task, required this.comments});
+  const NgKanbanDetail({
+    required this.task,
+    required this.comments,
+    this.events = const <NgKanbanEvent>[],
+  });
 
   final NgKanbanTask task;
   final List<NgKanbanComment> comments;
+  final List<NgKanbanEvent> events;
+
+  /// What stopped the card, newest blocking event first.
+  String? get blockReason {
+    for (final event in events.reversed) {
+      if (!ngKanbanBlockingEvents.contains(event.kind)) continue;
+      final reason = event.reason;
+      if (reason != null && reason.isNotEmpty) return reason;
+    }
+    return task.lastFailureError ?? task.blockKind;
+  }
 
   factory NgKanbanDetail.fromJson(Map<String, dynamic> json) => NgKanbanDetail(
     task: NgKanbanTask.fromJson(_map(json['task'])),
     comments: (json['comments'] as List? ?? const <dynamic>[])
         .whereType<Map>()
         .map((row) => NgKanbanComment.fromJson(_map(row)))
+        .toList(growable: false),
+    events: (json['events'] as List? ?? const <dynamic>[])
+        .whereType<Map>()
+        .map((row) => NgKanbanEvent.fromJson(_map(row)))
         .toList(growable: false),
   );
 }
@@ -247,7 +309,11 @@ abstract class NgKanbanApi {
   Future<Map<String, dynamic>> board();
   Future<Map<String, dynamic>> task(String id);
   Future<Map<String, dynamic>> createTask(Map<String, dynamic> body);
-  Future<Map<String, dynamic>> moveTask(String id, String status);
+  Future<Map<String, dynamic>> moveTask(
+    String id,
+    String status, {
+    String? summary,
+  });
   Future<Map<String, dynamic>> addComment(String id, String body);
 }
 
@@ -271,8 +337,18 @@ class DashboardKanbanApi implements NgKanbanApi {
       _dashboard.apiPost('$_base/tasks', body: body);
 
   @override
-  Future<Map<String, dynamic>> moveTask(String id, String status) =>
-      _dashboard.apiPatch('$_base/tasks/$id', body: {'status': status});
+  Future<Map<String, dynamic>> moveTask(
+    String id,
+    String status, {
+    String? summary,
+  }) => _dashboard.apiPatch(
+    '$_base/tasks/$id',
+    body: {
+      'status': status,
+      if (summary != null && summary.trim().isNotEmpty)
+        'summary': summary.trim(),
+    },
+  );
 
   @override
   Future<Map<String, dynamic>> addComment(String id, String body) =>
@@ -334,20 +410,30 @@ class NgKanbanModel extends ChangeNotifier {
     }
   }
 
+  /// Creates a card and files it in [placement]: triage is a create flag, and
+  /// the other lanes are a follow-up patch when the derive differs.
   Future<NgKanbanTask> createTask({
     required String title,
     String? body,
     String? assignee,
     int priority = 0,
+    String placement = 'ready',
   }) async {
+    final lane = ngKanbanPlacements.contains(placement) ? placement : 'ready';
     final json = await api.createTask({
       'title': title.trim(),
       if (body != null && body.trim().isNotEmpty) 'body': body.trim(),
       if (assignee != null && assignee.isNotEmpty) 'assignee': assignee,
       'priority': priority,
+      'triage': lane == 'triage',
     });
+    var created = NgKanbanTask.fromJson(_map(json['task']));
+    if (created.id.isNotEmpty && lane != 'triage' && created.status != lane) {
+      await api.moveTask(created.id, lane);
+      created = NgKanbanTask.fromJson({...created.raw, 'status': lane});
+    }
     await refresh();
-    return NgKanbanTask.fromJson(_map(json['task']));
+    return created;
   }
 
   Future<NgKanbanDetail> loadDetail(String id) async {
@@ -355,8 +441,8 @@ class NgKanbanModel extends ChangeNotifier {
     return NgKanbanDetail.fromJson(json);
   }
 
-  Future<void> moveTask(String id, String status) async {
-    await api.moveTask(id, status);
+  Future<void> moveTask(String id, String status, {String? summary}) async {
+    await api.moveTask(id, status, summary: summary);
     await refresh();
   }
 

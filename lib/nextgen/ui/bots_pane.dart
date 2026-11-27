@@ -29,18 +29,6 @@ class NgBotsPane extends StatefulWidget {
 
 class _NgBotsPaneState extends State<NgBotsPane> {
   @override
-  void initState() {
-    super.initState();
-    widget.model.startPolling();
-  }
-
-  @override
-  void dispose() {
-    widget.model.stopPolling();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
     final model = widget.model;
@@ -98,6 +86,7 @@ class _NgBotsPaneState extends State<NgBotsPane> {
                 _BotRow(
                   bot: bot,
                   bytes: model.avatarBytes(bot.name),
+                  unread: model.isBotUnread(bot.name),
                   onTap: () => widget.onOpenBot(bot),
                   onManage: () => _manageBot(bot),
                 ),
@@ -209,12 +198,14 @@ class _BotRow extends StatelessWidget {
   const _BotRow({
     required this.bot,
     required this.bytes,
+    required this.unread,
     required this.onTap,
     required this.onManage,
   });
 
   final NgBot bot;
   final Uint8List? bytes;
+  final bool unread;
   final VoidCallback onTap;
   final VoidCallback onManage;
 
@@ -236,6 +227,17 @@ class _BotRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (unread)
+            Container(
+              key: Key('ng-bot-unread-${bot.name}'),
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: c.accentText,
+                shape: BoxShape.circle,
+              ),
+            ),
           if (bot.lastActiveMs > 0)
             Text(
               ngAgo(DateTime.fromMillisecondsSinceEpoch(bot.lastActiveMs)),

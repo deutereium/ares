@@ -1469,6 +1469,9 @@
   "ng_group_name": "Gruppenname",
   "ng_select_members": "Mitglieder auswählen",
 
+  "ng_completion_note": "Abschlussnotiz",
+  "ng_completion_note_hint": "Was wurde erledigt? Das Gateway speichert es als Ergebnis der Karte.",
+  "ng_place_in": "Ablegen in",
   "ng_group_member_range": "Wähle 2 bis 6 Bots.",  "ng_delete_this_job": "Diesen Auftrag löschen?",
   "ng_it_stops_running_past_runs_stay": "Der Auftrag wird nicht mehr ausgeführt. Frühere Ausführungen bleiben in deinen Chats.",
   "ng_next_run": "Nächste Ausführung {when}",

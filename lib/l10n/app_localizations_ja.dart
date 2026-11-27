@@ -5183,6 +5183,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ng_select_members => 'メンバーを選択';
 
   @override
+  String get ng_completion_note => '完了メモ';
+
+  @override
+  String get ng_completion_note_hint => '何をしましたか？ゲートウェイがカードの結果として記録します。';
+
+  @override
+  String get ng_place_in => '配置先';
+
+  @override
   String get ng_group_member_range => 'ボットを2〜6体選択してください。';
 
   @override

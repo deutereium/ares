@@ -8950,6 +8950,24 @@ abstract class AppLocalizations {
   /// **'Select members'**
   String get ng_select_members;
 
+  /// No description provided for @ng_completion_note.
+  ///
+  /// In en, this message translates to:
+  /// **"Completion note"**
+  String get ng_completion_note;
+
+  /// No description provided for @ng_completion_note_hint.
+  ///
+  /// In en, this message translates to:
+  /// **"What was done? The gateway records this as the card's result."**
+  String get ng_completion_note_hint;
+
+  /// No description provided for @ng_place_in.
+  ///
+  /// In en, this message translates to:
+  /// **"Place in"**
+  String get ng_place_in;
+
   /// No description provided for @ng_group_member_range.
   ///
   /// In en, this message translates to:

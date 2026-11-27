@@ -55,8 +55,19 @@ class _FakeApi implements NgKanbanApi {
   }
 
   @override
-  Future<Map<String, dynamic>> moveTask(String id, String status) async {
-    calls.add((method: 'move', body: {'id': id, 'status': status}));
+  Future<Map<String, dynamic>> moveTask(
+    String id,
+    String status, {
+    String? summary,
+  }) async {
+    calls.add((
+      method: 'move',
+      body: {
+        'id': id,
+        'status': status,
+        if (summary != null) 'summary': summary,
+      },
+    ));
     return {
       'task': {'id': id, 'title': 'One', 'status': status},
     };
@@ -121,13 +132,14 @@ void main() {
     final model = NgKanbanModel(api);
     addTearDown(model.dispose);
 
-    await model.createTask(title: '  Ship it  ', priority: 1);
+    await model.createTask(title: '  Ship it  ', priority: 1, placement: 'triage');
     await model.moveTask('t1', 'ready');
     await model.addComment('t1', 'ping');
 
     final create = api.calls.firstWhere((c) => c.method == 'create').body;
     expect(create['title'], 'Ship it');
     expect(create['priority'], 1);
+    expect(create['triage'], isTrue);
     expect(create.containsKey('body'), isFalse);
     expect(create.containsKey('assignee'), isFalse);
     final move = api.calls.firstWhere((c) => c.method == 'move').body;
@@ -135,6 +147,49 @@ void main() {
     final comment = api.calls.firstWhere((c) => c.method == 'comment').body;
     expect(comment, {'id': 't1', 'body': 'ping'});
     expect(model.board, isNotNull);
+  });
+
+  test('create files the card in the chosen lane', () async {
+    final api = _FakeApi();
+    final model = NgKanbanModel(api);
+    addTearDown(model.dispose);
+
+    await model.createTask(title: 'Later', placement: 'todo');
+
+    final create = api.calls.firstWhere((c) => c.method == 'create').body;
+    expect(create['triage'], isFalse);
+    final move = api.calls.where((c) => c.method == 'move').single.body;
+    expect(move, {'id': 'new', 'status': 'todo'});
+  });
+
+  test('a completion note rides on the move to done', () async {
+    final api = _FakeApi();
+    final model = NgKanbanModel(api);
+    addTearDown(model.dispose);
+
+    await model.moveTask('t1', 'done', summary: '  shipped the fix  ');
+
+    final move = api.calls.firstWhere((c) => c.method == 'move').body;
+    expect(move, {
+      'id': 't1',
+      'status': 'done',
+      'summary': 'shipped the fix',
+    });
+  });
+
+  test('blocked detail surfaces the event reason', () {
+    final detail = NgKanbanDetail.fromJson({
+      'task': {'id': 't1', 'title': 'One', 'status': 'blocked'},
+      'comments': const [],
+      'events': [
+        {
+          'kind': 'blocked',
+          'payload': {'reason': 'waiting on credentials'},
+          'created_at': 9,
+        },
+      ],
+    });
+    expect(detail.blockReason, 'waiting on credentials');
   });
 
   test('detail parses comments', () async {

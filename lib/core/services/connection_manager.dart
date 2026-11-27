@@ -2847,6 +2847,24 @@ class DashboardClient {
     return {'data': decoded};
   }
 
+  /// A readable API failure: the dashboard puts the actionable text in
+  /// `detail` (or `message`) in the JSON body, and a bare status hides it.
+  String _apiFailure(http.Response res) {
+    var detail = '';
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map) {
+        final value = decoded['detail'] ?? decoded['message'] ?? decoded['error'];
+        if (value != null) detail = value.toString().trim();
+      }
+    } catch (_) {
+      // Not JSON: the status is all there is.
+    }
+    return detail.isEmpty
+        ? 'HTTP ${res.statusCode}'
+        : 'HTTP ${res.statusCode}: $detail';
+  }
+
   Future<Map<String, dynamic>> apiGet(
     String endpoint, {
     Map<String, String>? queryParameters,
@@ -3306,7 +3324,7 @@ class DashboardClient {
       );
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('HTTP ${res.statusCode}');
+      throw Exception(_apiFailure(res));
     }
     return _decodeMapResponse(res);
   }
@@ -3341,7 +3359,7 @@ class DashboardClient {
       );
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('HTTP ${res.statusCode}');
+      throw Exception(_apiFailure(res));
     }
     return _decodeMapResponse(res);
   }

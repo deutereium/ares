@@ -5107,6 +5107,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ng_select_members => '选择成员';
 
   @override
+  String get ng_completion_note => '完成备注';
+
+  @override
+  String get ng_completion_note_hint => '做了什么？网关会将其记录为任务结果。';
+
+  @override
+  String get ng_place_in => '放入';
+
+  @override
   String get ng_group_member_range => '请选择 2 到 6 个机器人。';
 
   @override

@@ -5182,6 +5182,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ng_select_members => '멤버 선택';
 
   @override
+  String get ng_completion_note => '완료 메모';
+
+  @override
+  String get ng_completion_note_hint => '무엇을 했나요? 게이트웨이가 카드 결과로 기록합니다.';
+
+  @override
+  String get ng_place_in => '배치 위치';
+
+  @override
   String get ng_group_member_range => '봇을 2~6개 선택하세요.';
 
   @override

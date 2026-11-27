@@ -5298,6 +5298,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ng_select_members => 'Select members';
 
   @override
+  String get ng_completion_note => 'Completion note';
+
+  @override
+  String get ng_completion_note_hint => 'What was done? The gateway records this as the card\'s result.';
+
+  @override
+  String get ng_place_in => 'Place in';
+
+  @override
   String get ng_group_member_range => 'Pick 2 to 6 bots.';
 
   @override

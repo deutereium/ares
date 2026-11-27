@@ -5330,6 +5330,15 @@ class AppLocalizationsUk extends AppLocalizations {
   String get ng_select_members => 'Вибрати учасників';
 
   @override
+  String get ng_completion_note => 'Нотатка про завершення';
+
+  @override
+  String get ng_completion_note_hint => 'Що було зроблено? Шлюз збереже це як результат картки.';
+
+  @override
+  String get ng_place_in => 'Розмістити в';
+
+  @override
   String get ng_group_member_range => 'Виберіть від 2 до 6 ботів.';
 
   @override

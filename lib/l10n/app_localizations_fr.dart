@@ -5350,6 +5350,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ng_select_members => 'Sélectionner des membres';
 
   @override
+  String get ng_completion_note => 'Note de fin';
+
+  @override
+  String get ng_completion_note_hint => 'Qu\'a-t-il été fait ? La passerelle l\'enregistre comme résultat de la tâche.';
+
+  @override
+  String get ng_place_in => 'Placer dans';
+
+  @override
   String get ng_group_member_range => 'Choisis 2 à 6 bots.';
 
   @override

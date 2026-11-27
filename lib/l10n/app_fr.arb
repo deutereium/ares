@@ -1469,6 +1469,9 @@
   "ng_group_name": "Nom du groupe",
   "ng_select_members": "Sélectionner des membres",
 
+  "ng_completion_note": "Note de fin",
+  "ng_completion_note_hint": "Qu'a-t-il été fait ? La passerelle l'enregistre comme résultat de la tâche.",
+  "ng_place_in": "Placer dans",
   "ng_group_member_range": "Choisis 2 à 6 bots.",  "ng_delete_this_job": "Supprimer cette tâche ?",
   "ng_it_stops_running_past_runs_stay": "Elle cessera de s’exécuter. Les exécutions passées resteront dans vos conversations.",
   "ng_next_run": "Prochaine exécution : {when}",

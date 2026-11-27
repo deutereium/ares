@@ -1469,6 +1469,9 @@
   "ng_group_name": "群聊名称",
   "ng_select_members": "选择成员",
 
+  "ng_completion_note": "完成备注",
+  "ng_completion_note_hint": "做了什么？网关会将其记录为任务结果。",
+  "ng_place_in": "放入",
   "ng_group_member_range": "请选择 2 到 6 个机器人。",  "ng_delete_this_job": "删除此任务？",
   "ng_it_stops_running_past_runs_stay": "删除后将停止运行。以往的运行记录仍会保留在聊天中。",
   "ng_next_run": "下次运行：{when}",
