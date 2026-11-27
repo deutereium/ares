@@ -28,6 +28,7 @@ import 'scheduled_page.dart';
 import 'sessions_sidebar.dart';
 import 'settings_page.dart';
 import 'slash_suggestions.dart';
+import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
 class NgMainPage extends StatelessWidget {
