@@ -3,6 +3,7 @@
 // profile asset store, and hosted rooms through groups.rename / groups.disband.
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/models/connection.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
