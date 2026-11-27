@@ -6249,4 +6249,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => 'Chats en la barra lateral';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      'Cuántos chats muestra la barra lateral antes de «Cargar más».';
+
+  @override
+  String get ng_fewer_chats => 'Menos chats';
+
+  @override
+  String get ng_more_chats => 'Más chats';
 }

@@ -6250,6 +6250,19 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => 'Chats na barra lateral';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      'Quantos chats a barra lateral mostra antes de “Carregar mais”.';
+
+  @override
+  String get ng_fewer_chats => 'Menos chats';
+
+  @override
+  String get ng_more_chats => 'Mais chats';
 }
 
 /// The translations for Portuguese, as used in Brazil (`pt_BR`).
@@ -12300,4 +12313,17 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => 'Chats na barra lateral';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      'Quantos chats a barra lateral mostra antes de “Carregar mais”.';
+
+  @override
+  String get ng_fewer_chats => 'Menos chats';
+
+  @override
+  String get ng_more_chats => 'Mais chats';
 }

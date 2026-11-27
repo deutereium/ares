@@ -10475,6 +10475,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bots'**
   String get ng_bot_roster;
+
+  /// No description provided for @ng_chats_in_sidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats in sidebar'**
+  String get ng_chats_in_sidebar;
+
+  /// No description provided for @ng_how_many_chats_the_sidebar_lists_before_load_more.
+  ///
+  /// In en, this message translates to:
+  /// **'How many chats the sidebar lists before Load more.'**
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more;
+
+  /// No description provided for @ng_fewer_chats.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer chats'**
+  String get ng_fewer_chats;
+
+  /// No description provided for @ng_more_chats.
+  ///
+  /// In en, this message translates to:
+  /// **'More chats'**
+  String get ng_more_chats;
 }
 
 class _AppLocalizationsDelegate

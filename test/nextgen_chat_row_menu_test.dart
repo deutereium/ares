@@ -174,7 +174,7 @@ Future<_Harness> _pump(
             model: model,
             currentSessionId: current,
             onOpen: (s) => opened.add(s.id),
-            onNewChat: () {},
+            onNewChat: (_) {},
             onDestination: (_) {},
           ),
         ),

@@ -6070,4 +6070,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => '사이드바 채팅';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      '‘더 불러오기’ 전에 사이드바에 표시할 채팅 수입니다.';
+
+  @override
+  String get ng_fewer_chats => '채팅 줄이기';
+
+  @override
+  String get ng_more_chats => '채팅 늘리기';
 }

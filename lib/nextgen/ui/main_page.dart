@@ -281,11 +281,7 @@ class _NgMainPageState extends State<_NgMainContent>
     // app reopens; restoring a bot's stored id there yields "session not found".
     if (sessionProfile == null) {
       unawaited(
-        NextGenPreferences.setLastSession(
-          scope.prefs,
-          scope.connection.id,
-          id,
-        ),
+        NextGenPreferences.setLastSession(scope.prefs, scope.connection.id, id),
       );
     }
   }
@@ -509,7 +505,8 @@ class _NgMainPageState extends State<_NgMainContent>
     if (failed && (chat.error?.isNotEmpty ?? false)) text = chat.error!;
     final identity = chat.identity;
     final botName = identity?.isBot == true ? identity!.botName!.trim() : '';
-    final botAvatar = identity?.avatarBytes ??
+    final botAvatar =
+        identity?.avatarBytes ??
         (identity?.profileName == null
             ? null
             : _bots?.avatarBytes(identity!.profileName!));
@@ -589,20 +586,36 @@ class _NgMainPageState extends State<_NgMainContent>
     }
   }
 
+  /// The profile a row lives on, or null when it is the connection's own.
+  /// Passing the connection's profile as a bot-style override would give the
+  /// same chat a second controller cache entry and skip last-session restore.
+  String? _profileOf(Session s) {
+    final profile = _sessions?.profileOf(s);
+    final own = NgScope.of(context).connection.gatewayProfile;
+    if (profile == null || profile == own) return null;
+    return profile;
+  }
+
   void _open(Session s) {
     _scaffold.currentState?.closeDrawer();
     if (s.id == _chat?.storedId) return;
-    _openId(s.id, ngSessionTitle(s));
+    _openId(s.id, ngSessionTitle(s), sessionProfile: _profileOf(s));
   }
 
-  void _newChat() {
+  void _newChat() => _newChatOn(null);
+
+  /// Starts a blank chat on [profile]'s store (null = this connection's own).
+  void _newChatOn(String? profile) {
     _scaffold.currentState?.closeDrawer();
-    if (_chat?.isNew == true &&
+    final own = NgScope.of(context).connection.gatewayProfile;
+    final target = (profile == null || profile == own) ? null : profile;
+    if (target == null &&
+        _chat?.isNew == true &&
         _chat!.items.isEmpty &&
         _chat!.workingDirectory == null) {
       return;
     }
-    _openId(null, '');
+    _openId(null, '', sessionProfile: target);
   }
 
   void _newProjectChat(HermesProject project) {
@@ -687,14 +700,14 @@ class _NgMainPageState extends State<_NgMainContent>
     unawaited(
       Navigator.of(context)
           .push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => NgGroupChatPage(controller: controller),
-        ),
-      )
+            MaterialPageRoute<void>(
+              builder: (_) => NgGroupChatPage(controller: controller),
+            ),
+          )
           .whenComplete(() {
-        controller.stopPolling();
-        controller.dispose();
-      }),
+            controller.stopPolling();
+            controller.dispose();
+          }),
     );
   }
 
@@ -721,7 +734,7 @@ class _NgMainPageState extends State<_NgMainContent>
           bots: _bots!,
           currentSessionId: chat?.storedId,
           onOpen: _open,
-          onNewChat: _newChat,
+          onNewChat: _newChatOn,
           onNewGroupChat: _newGroupChat,
           onDestination: _go,
           onOpenBot: _openBot,

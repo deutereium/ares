@@ -6247,4 +6247,17 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => 'Чати на бічній панелі';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      'Скільки чатів показувати на бічній панелі до «Завантажити ще».';
+
+  @override
+  String get ng_fewer_chats => 'Менше чатів';
+
+  @override
+  String get ng_more_chats => 'Більше чатів';
 }

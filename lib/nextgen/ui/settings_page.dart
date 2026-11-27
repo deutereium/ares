@@ -74,6 +74,66 @@ class _NgSettingsPageState extends State<NgSettingsPage> {
     });
   }
 
+  /// The sidebar's row cap: how many chats show before Load more. Stepped by
+  /// five so a few taps span the whole 5–50 range.
+  Widget _sidebarRowsSetting(NgColors c, NgScope scope) {
+    final rows = NextGenPreferences.sidebarRows(scope.prefs);
+    Future<void> set(int value) async {
+      await NextGenPreferences.setSidebarRows(scope.prefs, value);
+      if (mounted) setState(() {});
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ngL.ng_chats_in_sidebar,
+                  style: NgType.body.copyWith(color: c.text),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  ngL.ng_how_many_chats_the_sidebar_lists_before_load_more,
+                  style: NgType.caption.copyWith(color: c.text3),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            key: const Key('ng-sidebar-rows-fewer'),
+            tooltip: ngL.ng_fewer_chats,
+            onPressed: rows > NextGenPreferences.minSidebarRows
+                ? () => set(rows - 5)
+                : null,
+            icon: const Icon(Icons.remove_circle_outline),
+            color: c.text2,
+          ),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$rows',
+              textAlign: TextAlign.center,
+              style: NgType.label.copyWith(color: c.text),
+            ),
+          ),
+          IconButton(
+            key: const Key('ng-sidebar-rows-more'),
+            tooltip: ngL.ng_more_chats,
+            onPressed: rows < NextGenPreferences.maxSidebarRows
+                ? () => set(rows + 5)
+                : null,
+            icon: const Icon(Icons.add_circle_outline),
+            color: c.text2,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
@@ -321,6 +381,7 @@ class _NgSettingsPageState extends State<NgSettingsPage> {
                     onChanged: (v) =>
                         NextGenPreferences.setEnabled(scope.prefs, v),
                   ),
+                  _sidebarRowsSetting(c, scope),
                   NgRow(
                     icon: Icons.tune,
                     title: ngL.ng_more_settings,

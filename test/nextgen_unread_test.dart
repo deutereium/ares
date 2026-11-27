@@ -276,7 +276,7 @@ void main() {
                   model: model,
                   currentSessionId: 'open',
                   onOpen: (_) {},
-                  onNewChat: () {},
+                  onNewChat: (_) {},
                   onDestination: (_) {},
                 ),
               );
@@ -358,7 +358,7 @@ void main() {
                   model: model,
                   currentSessionId: null,
                   onOpen: (_) {},
-                  onNewChat: () {},
+                  onNewChat: (_) {},
                   onDestination: (_) {},
                 ),
               );
@@ -437,7 +437,7 @@ void main() {
                   model: model,
                   currentSessionId: null,
                   onOpen: (_) {},
-                  onNewChat: () {},
+                  onNewChat: (_) {},
                   onDestination: (_) {},
                 ),
               );

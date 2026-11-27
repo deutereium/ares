@@ -279,7 +279,7 @@ void main() {
                   model: model,
                   currentSessionId: null,
                   onOpen: (_) {},
-                  onNewChat: () {},
+                  onNewChat: (_) {},
                   onDestination: (_) {},
                 ),
               );

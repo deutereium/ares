@@ -5981,6 +5981,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => '侧边栏聊天';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      '“加载更多”之前侧边栏显示的聊天数量。';
+
+  @override
+  String get ng_fewer_chats => '减少聊天';
+
+  @override
+  String get ng_more_chats => '增加聊天';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11768,4 +11781,17 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => '侧边栏聊天';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      '“加载更多”之前侧边栏显示的聊天数量。';
+
+  @override
+  String get ng_fewer_chats => '减少聊天';
+
+  @override
+  String get ng_more_chats => '增加聊天';
 }

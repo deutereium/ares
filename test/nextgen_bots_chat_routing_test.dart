@@ -254,7 +254,7 @@ void main() {
               model: sessions,
               currentSessionId: null,
               onOpen: (_) {},
-              onNewChat: () {},
+              onNewChat: (_) {},
               onDestination: (_) {},
               bots: bots,
               selectedTab: tab,

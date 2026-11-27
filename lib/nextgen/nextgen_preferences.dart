@@ -94,7 +94,21 @@ abstract final class NextGenPreferences {
   static const glowKey = 'nextgen_glow';
   static const starredModelsKey = 'nextgen_starred_models';
   static const recentModelsKey = 'nextgen_recent_models';
+  static const sidebarRowsKey = 'nextgen_sidebar_rows';
   static const lastSessionKeyPrefix = 'nextgen_last_session.';
+
+  /// How many chat rows the sidebar shows before Load more.
+  static const int defaultSidebarRows = 15;
+  static const int minSidebarRows = 5;
+  static const int maxSidebarRows = 50;
+
+  static int sidebarRows(SharedPreferences prefs) {
+    final value = prefs.getInt(sidebarRowsKey) ?? defaultSidebarRows;
+    return value.clamp(minSidebarRows, maxSidebarRows);
+  }
+
+  static Future<void> setSidebarRows(SharedPreferences prefs, int value) =>
+      prefs.setInt(sidebarRowsKey, value.clamp(minSidebarRows, maxSidebarRows));
 
   /// Reads every NextGen preference into memory. Synchronous: the shared
   /// [SharedPreferences] instance is already loaded at startup.

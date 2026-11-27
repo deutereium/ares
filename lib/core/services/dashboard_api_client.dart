@@ -365,13 +365,103 @@ class DashboardApiClient extends ApiClient {
     String? title,
     String? excludeSources,
     Duration timeout = ApiClient.requestTimeout,
+  }) => _readSessionsPage(
+    profile: _profile,
+    limit: limit,
+    offset: offset,
+    title: title,
+    excludeSources: excludeSources,
+    timeout: timeout,
+  );
+
+  /// The same listing, scoped to an explicit profile. Used when NextGen merges
+  /// a search across every profile of a multiplexed gateway.
+  Future<SessionListPage> getProfileSessionsPage({
+    required String profile,
+    int limit = 50,
+    int offset = 0,
+    String? title,
+    String? excludeSources,
+    Duration timeout = ApiClient.requestTimeout,
+  }) => _readSessionsPage(
+    profile: profile,
+    limit: limit,
+    offset: offset,
+    title: title,
+    excludeSources: excludeSources,
+    timeout: timeout,
+  );
+
+  /// One page of the all-profiles list (`GET /api/profiles/sessions`), whose
+  /// rows are tagged with their owning profile. The gateway fans this out
+  /// across every profile store and returns them already recency-sorted.
+  Future<SessionListPage> getAllProfilesSessionsPage({
+    int limit = 50,
+    int offset = 0,
+    String? excludeSources,
+    Duration timeout = ApiClient.requestTimeout,
   }) async {
+    final pageSize = limit.clamp(1, 200);
+    final res = await dashboard.apiRequest(
+      'GET',
+      'profiles/sessions',
+      queryParameters: {
+        'limit': '$pageSize',
+        'offset': '$offset',
+        'order': 'recent',
+        'archived': 'exclude',
+        'profile': 'all',
+        'exclude_sources': ?excludeSources,
+      },
+      timeout: timeout,
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw DashboardRequestException(
+        res.statusCode,
+        dashboardErrorMessage(res),
+      );
+    }
+    final data = _decodeMap(res);
+    final rows = (data['sessions'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(Session.fromJson)
+        .toList();
+    final total = data['total'];
+    return SessionListPage(
+      sessions: rows,
+      hasMore: total is int
+          ? offset + rows.length < total
+          : rows.length >= pageSize,
+    );
+  }
+
+  Future<SessionListPage> _readSessionsPage({
+    required String? profile,
+    required int limit,
+    required int offset,
+    required String? title,
+    required String? excludeSources,
+    required Duration timeout,
+  }) async {
+    final profileQuery = {'profile': ?profile};
     if (title != null && title.trim().isNotEmpty) {
-      final found = await _getMap(
+      final res = await dashboard.apiRequest(
+        'GET',
         'sessions/search',
-        query: {'q': title.trim(), 'limit': '${limit.clamp(1, 100)}'},
+        queryParameters: {
+          ...profileQuery,
+          'q': title.trim(),
+          'limit': '${limit.clamp(1, 100)}',
+        },
         timeout: timeout,
       );
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw DashboardRequestException(
+          res.statusCode,
+          dashboardErrorMessage(res),
+        );
+      }
+      final found = _decodeMap(res);
       final rows = (found['results'] as List? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(Session.fromJson)
@@ -379,9 +469,11 @@ class DashboardApiClient extends ApiClient {
       return SessionListPage(sessions: rows, hasMore: false);
     }
     final pageSize = limit.clamp(1, 100);
-    final data = await _getMap(
+    final res = await dashboard.apiRequest(
+      'GET',
       'sessions',
-      query: {
+      queryParameters: {
+        ...profileQuery,
         'limit': '$pageSize',
         'offset': '$offset',
         'order': 'recent',
@@ -390,6 +482,13 @@ class DashboardApiClient extends ApiClient {
       },
       timeout: timeout,
     );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw DashboardRequestException(
+        res.statusCode,
+        dashboardErrorMessage(res),
+      );
+    }
+    final data = _decodeMap(res);
     final rows = (data['sessions'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(Session.fromJson)

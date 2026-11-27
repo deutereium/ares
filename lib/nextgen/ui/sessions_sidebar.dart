@@ -19,6 +19,7 @@ import 'bots_pane.dart';
 import 'widgets.dart';
 import '../data/nextgen_bots.dart';
 import '../nextgen_l10n.dart';
+import '../nextgen_preferences.dart';
 
 enum NgSidebarFilter { all, running, needsYou, crons }
 
@@ -60,12 +61,43 @@ class NgSessionsModel extends ChangeNotifier {
     _seen = null;
     _showSubagents = null;
     sessions = [];
+    profiles = const [];
     _serverOffset = 0;
     hasMore = false;
     _listen();
   }
 
   List<Session> sessions = [];
+
+  /// Profiles whose chats this list merges, from the gateway's authenticated
+  /// `/api/profiles`. Empty until the list is known, which keeps single-profile
+  /// and legacy gateways on the plain scoped listing.
+  List<String> profiles = const [];
+
+  bool get aggregatesProfiles => profiles.isNotEmpty;
+
+  /// The profile that owns [s], preferring the row's own tag from the
+  /// all-profiles endpoint and falling back to the connection's profile.
+  String? profileOf(Session s) =>
+      s.profile ??
+      (aggregatesProfiles ? null : scope.connection.gatewayProfile);
+
+  /// The small label shown under a chat title: the owning profile's name.
+  String profileLabelOf(Session s) => ngProfileLabel(
+    profileOf(s) ??
+        (aggregatesProfiles ? null : scope.connection.gatewayProfile),
+  );
+
+  /// A REST client scoped to [s]'s profile, so pin/read/rename actions on a
+  /// chat from another profile reach the store that owns it.
+  DashboardApiClient apiFor(Session s) {
+    final profile = profileOf(s);
+    if (!aggregatesProfiles || profile == null) return scope.gateway.api;
+    return DashboardApiClient.withDashboard(
+      scope.gateway.dashboard,
+      profile: profile,
+    );
+  }
 
   bool _browsingCrons = false;
   bool? _showSubagents;
@@ -146,13 +178,10 @@ class NgSessionsModel extends ChangeNotifier {
       if (left > 0 && left < soonest) soonest = left;
     }
     if (!soonest.isFinite) return;
-    _activeExpiry = Timer(
-      Duration(seconds: soonest.ceil() + 1),
-      () {
-        notifyListeners();
-        _scheduleActiveExpiry();
-      },
-    );
+    _activeExpiry = Timer(Duration(seconds: soonest.ceil() + 1), () {
+      notifyListeners();
+      _scheduleActiveExpiry();
+    });
   }
 
   /// Whether [s] has progress the user hasn't seen (Kyllene's unread mark).
@@ -204,9 +233,7 @@ class NgSessionsModel extends ChangeNotifier {
       sessions[i] = row.withReadState(unread: false, lastReadAt: now);
       if (row.unread || (row.lastReadAt ?? 0) < activity) {
         unawaited(
-          scope.gateway.api
-              .setSessionUnread(id, unread: false)
-              .catchError((_) {}),
+          apiFor(row).setSessionUnread(id, unread: false).catchError((_) {}),
         );
       }
     }
@@ -221,9 +248,7 @@ class NgSessionsModel extends ChangeNotifier {
     if (i >= 0 && s.lastReadAt != null) {
       sessions[i] = s.withReadState(unread: true, lastReadAt: 0);
       unawaited(
-        scope.gateway.api
-            .setSessionUnread(s.id, unread: true)
-            .catchError((_) {}),
+        apiFor(s).setSessionUnread(s.id, unread: true).catchError((_) {}),
       );
     }
     notifyListeners();
@@ -280,54 +305,23 @@ class NgSessionsModel extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      if (query.isNotEmpty) {
-        // Search is one server-side read; it does not page.
-        final page = await api.getSessionsPage(limit: _pageSize, title: query);
-        if (generation != _generation) return;
-        sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
-        _serverOffset = 0;
-        hasMore = false;
+      final aggregate = cachedNgProfiles(scope);
+      if (aggregate != null && aggregate.isNotEmpty) {
+        profiles = List<String>.unmodifiable(aggregate);
+        try {
+          await _refreshAcrossProfiles(generation, browsingCrons);
+        } catch (_) {
+          // A gateway that lists profiles but predates the merged endpoint
+          // still works through its own profile-scoped listing.
+          if (generation != _generation) return;
+          profiles = const [];
+          await _refreshSingleProfile(api, generation, browsingCrons);
+        }
       } else {
-        // A profile-local read preserves the gateway's Show subagents choice
-        // even on servers that ignore exclude_sources. Never write config.
-        if (!browsingCrons) {
-          final showSubagents = await api.showSubagentSessions();
-          if (generation != _generation) return;
-          _showSubagents = showSubagents;
-        }
-        // Older gateways may ignore exclusions. Count only visible rows, but
-        // advance through raw windows so machine-heavy pages cannot starve
-        // real chats (#297, #362). Crons retains its unfiltered transport.
-        final collected = <Session>[];
-        final seenIds = <String>{};
-        var offset = 0;
-        var pages = 0;
-        var more = false;
-        while (pages < _maxRefreshPages) {
-          final page = await api.getSessionsPage(
-            limit: _pageSize,
-            offset: offset,
-            excludeSources: browsingCrons ? null : kChatListingExcludedSources,
-          );
-          if (generation != _generation) return;
-          pages++;
-          offset += page.sessions.length;
-          for (final s in page.sessions) {
-            if (s.isUntitledCronShell || !seenIds.add(s.id)) continue;
-            collected.add(s);
-          }
-          more = page.hasMore;
-          if (!more || page.sessions.isEmpty) break;
-          final visible = collected
-              .where(browsingCrons ? isCronSession : includesChat)
-              .length;
-          if (visible >= _targetChats) break;
-        }
-        if (generation != _generation) return;
-        sessions = collected;
-        _serverOffset = offset;
-        hasMore = more;
+        profiles = const [];
+        await _refreshSingleProfile(api, generation, browsingCrons);
       }
+      if (generation != _generation) return;
       // The chat on screen is read through whatever the list now says.
       final current = currentId;
       if (current != null) {
@@ -348,6 +342,117 @@ class NgSessionsModel extends ChangeNotifier {
     }
   }
 
+  static double _recency(Session s) =>
+      s.lastActive > 0 ? s.lastActive : s.startedAt;
+
+  /// One page of every profile, merged by recency. The gateway's
+  /// `/api/profiles/sessions` fan-out does the merge and tags each row with
+  /// its owning profile; search still runs per profile because that endpoint
+  /// has no title filter.
+  Future<void> _refreshAcrossProfiles(
+    int generation,
+    bool browsingCrons,
+  ) async {
+    final api = scope.gateway.api;
+    final names = profiles;
+    if (query.isNotEmpty) {
+      final pages = await Future.wait(
+        names.map((profile) async {
+          final page = await api.getProfileSessionsPage(
+            profile: profile,
+            limit: _pageSize,
+            title: query,
+          );
+          return (profile: profile, sessions: page.sessions);
+        }),
+      );
+      if (generation != _generation) return;
+      final seenIds = <String>{};
+      final collected = <Session>[
+        for (final page in pages)
+          for (final session in page.sessions)
+            if (!session.isUntitledCronShell && seenIds.add(session.id))
+              session.profile == null
+                  ? session.withProfile(page.profile)
+                  : session,
+      ]..sort((a, b) => _recency(b).compareTo(_recency(a)));
+      sessions = collected;
+      _serverOffset = 0;
+      hasMore = false;
+      return;
+    }
+    // A profile-local read preserves the gateway's Show subagents choice
+    // even on servers that ignore exclude_sources. Never write config.
+    if (!browsingCrons) {
+      final showSubagents = await api.showSubagentSessions();
+      if (generation != _generation) return;
+      _showSubagents = showSubagents;
+    }
+    final page = await api.getAllProfilesSessionsPage(
+      limit: _pageSize,
+      excludeSources: browsingCrons ? null : kChatListingExcludedSources,
+    );
+    if (generation != _generation) return;
+    sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
+    _serverOffset = page.sessions.length;
+    hasMore = page.hasMore;
+  }
+
+  Future<void> _refreshSingleProfile(
+    DashboardApiClient api,
+    int generation,
+    bool browsingCrons,
+  ) async {
+    if (query.isNotEmpty) {
+      // Search is one server-side read; it does not page.
+      final page = await api.getSessionsPage(limit: _pageSize, title: query);
+      if (generation != _generation) return;
+      sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
+      _serverOffset = 0;
+      hasMore = false;
+      return;
+    }
+    // A profile-local read preserves the gateway's Show subagents choice
+    // even on servers that ignore exclude_sources. Never write config.
+    if (!browsingCrons) {
+      final showSubagents = await api.showSubagentSessions();
+      if (generation != _generation) return;
+      _showSubagents = showSubagents;
+    }
+    // Older gateways may ignore exclusions. Count only visible rows, but
+    // advance through raw windows so machine-heavy pages cannot starve
+    // real chats (#297, #362). Crons retains its unfiltered transport.
+    final collected = <Session>[];
+    final seenIds = <String>{};
+    var offset = 0;
+    var pages = 0;
+    var more = false;
+    while (pages < _maxRefreshPages) {
+      final page = await api.getSessionsPage(
+        limit: _pageSize,
+        offset: offset,
+        excludeSources: browsingCrons ? null : kChatListingExcludedSources,
+      );
+      if (generation != _generation) return;
+      pages++;
+      offset += page.sessions.length;
+      for (final s in page.sessions) {
+        if (s.isUntitledCronShell || !seenIds.add(s.id)) continue;
+        collected.add(s);
+      }
+      more = page.hasMore;
+      if (!more || page.sessions.isEmpty) break;
+      final visible = collected
+          .where(browsingCrons ? isCronSession : includesChat)
+          .length;
+      if (visible >= _targetChats) break;
+    }
+    if (generation != _generation) return;
+    sessions = collected;
+    _serverOffset = offset;
+    hasMore = more;
+  }
+
   Future<void> loadMore() async {
     if (loading || !hasMore || query.isNotEmpty) return;
     final generation = _generation;
@@ -356,6 +461,23 @@ class NgSessionsModel extends ChangeNotifier {
     try {
       final api = scope.gateway.api;
       final browsingCrons = _browsingCrons;
+      if (aggregatesProfiles) {
+        final page = await api.getAllProfilesSessionsPage(
+          limit: _pageSize,
+          offset: _serverOffset,
+          excludeSources: browsingCrons ? null : kChatListingExcludedSources,
+        );
+        if (generation != _generation) return;
+        _serverOffset += page.sessions.length;
+        final known = sessions.map((s) => s.id).toSet();
+        sessions = [
+          ...sessions,
+          for (final session in page.sessions)
+            if (!session.isUntitledCronShell && known.add(session.id)) session,
+        ];
+        hasMore = page.sessions.isNotEmpty && page.hasMore;
+        return;
+      }
       final collected = [...sessions];
       final known = collected.map((s) => s.id).toSet();
       var addedVisible = 0;
@@ -478,7 +600,9 @@ class NgSessionsSidebar extends StatefulWidget {
   final NgSessionsModel model;
   final String? currentSessionId;
   final ValueChanged<Session> onOpen;
-  final VoidCallback onNewChat;
+
+  /// Starts a new chat on [profile]'s store; null means the connection's own.
+  final void Function(String? profile) onNewChat;
   final ValueChanged<NgDestination> onDestination;
 
   /// Offered beside New chat while the Bots tab is showing.
@@ -506,6 +630,12 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   NgSidebarTab _tab = NgSidebarTab.sessions;
   NgBotsModel? _bots;
 
+  /// Rows rendered before Load more. The drawer opens with the newest
+  /// [NextGenPreferences.defaultSidebarRows]; Settings can raise or lower it.
+  int _visible = NextGenPreferences.defaultSidebarRows;
+  int _rowCap = NextGenPreferences.defaultSidebarRows;
+  bool _rowsLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -521,10 +651,18 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
     });
   }
 
+  /// Picks a profile (when the gateway has more than one) and starts a chat
+  /// there. The old top-of-sidebar profile switch lives here now.
+  Future<void> _startChat() async {
+    final choice = await showNgNewChatProfilePicker(context);
+    if (!mounted || choice == null) return;
+    widget.onNewChat(choice.profile);
+  }
+
   Future<void> _newChatPressed() async {
     final createGroup = widget.onNewGroupChat;
     if (_tab != NgSidebarTab.bots || createGroup == null) {
-      widget.onNewChat();
+      await _startChat();
       return;
     }
     final choice = await showNgSheet<String>(
@@ -553,7 +691,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
     if (choice == 'group') {
       await createGroup();
     } else {
-      widget.onNewChat();
+      await _startChat();
     }
   }
 
@@ -568,6 +706,11 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _bots ??= widget.bots ?? NgBotsModel(NgScope.of(context));
+    if (!_rowsLoaded) {
+      _rowsLoaded = true;
+      _rowCap = NextGenPreferences.sidebarRows(NgScope.of(context).prefs);
+      _visible = _rowCap;
+    }
   }
 
   @override
@@ -624,7 +767,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   /// Opens [s]'s actions: a menu at the global point [at] for a mouse or
   /// keyboard, otherwise (long-press) the bottom sheet.
   Future<void> _actions(Session s, {Offset? at}) async {
-    final api = NgScope.of(context).gateway.api;
+    final api = widget.model.apiFor(s);
     final choice = at == null
         ? await _actionSheet(s)
         : await _actionMenu(s, at);
@@ -782,11 +925,13 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
               NgSidebarFilter.crons =>
                 all.where((s) => isCronSession(s)).toList(),
             };
+            final visible = filtered.take(_visible).toList();
             final pinned =
                 _filter == NgSidebarFilter.all && widget.model.query.isEmpty
-                ? filtered.where((s) => s.pinned).toList()
+                ? visible.where((s) => s.pinned).toList()
                 : <Session>[];
-            final rest = filtered.where((s) => !pinned.contains(s)).toList();
+            final rest = visible.where((s) => !pinned.contains(s)).toList();
+            final hasLocalMore = filtered.length > _visible;
             return Column(
               children: [
                 Padding(
@@ -795,57 +940,63 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     children: [
                       Expanded(
                         child: TextField(
-                    key: const Key('ng-session-search'),
-                    controller: _search,
-                    focusNode: _searchFocus,
-                    onChanged: (value) {
-                      if (_tab == NgSidebarTab.bots) {
-                        _bots!.query = value;
-                      } else {
-                        widget.model.search(value);
-                      }
-                      setState(() {});
-                    },
-                    style: NgType.body.copyWith(color: c.text),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: c.input,
-                      prefixIcon: Icon(Icons.search, color: c.text3, size: 20),
-                      suffixIcon: _search.text.isEmpty
-                          ? null
-                          : IconButton(
-                              key: const Key('ng-clear-search'),
-                              tooltip:
-                                  AppLocalizations.of(context)?.clear_search ??
-                                  'Clear search',
-                              icon: const Icon(Icons.clear, size: 18),
+                          key: const Key('ng-session-search'),
+                          controller: _search,
+                          focusNode: _searchFocus,
+                          onChanged: (value) {
+                            if (_tab == NgSidebarTab.bots) {
+                              _bots!.query = value;
+                            } else {
+                              widget.model.search(value);
+                            }
+                            setState(() => _visible = _rowCap);
+                          },
+                          style: NgType.body.copyWith(color: c.text),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            filled: true,
+                            fillColor: c.input,
+                            prefixIcon: Icon(
+                              Icons.search,
                               color: c.text3,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 40,
-                                height: 40,
-                              ),
-                              onPressed: () {
-                                _search.clear();
-                                if (_tab == NgSidebarTab.bots) {
-                                  _bots!.query = '';
-                                } else {
-                                  widget.model.clearSearch();
-                                }
-                                _searchFocus.requestFocus();
-                                setState(() {});
-                              },
+                              size: 20,
                             ),
-                      hintText: _tab == NgSidebarTab.bots
-                          ? ngL.ng_search_bots
-                          : ngL.ng_search_chats,
-                      hintStyle: NgType.body.copyWith(color: c.textMuted),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(NgRadii.full),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
+                            suffixIcon: _search.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    key: const Key('ng-clear-search'),
+                                    tooltip:
+                                        AppLocalizations.of(
+                                          context,
+                                        )?.clear_search ??
+                                        'Clear search',
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    color: c.text3,
+                                    constraints: const BoxConstraints.tightFor(
+                                      width: 40,
+                                      height: 40,
+                                    ),
+                                    onPressed: () {
+                                      _search.clear();
+                                      if (_tab == NgSidebarTab.bots) {
+                                        _bots!.query = '';
+                                      } else {
+                                        widget.model.clearSearch();
+                                      }
+                                      _searchFocus.requestFocus();
+                                      setState(() => _visible = _rowCap);
+                                    },
+                                  ),
+                            hintText: _tab == NgSidebarTab.bots
+                                ? ngL.ng_search_bots
+                                : ngL.ng_search_chats,
+                            hintStyle: NgType.body.copyWith(color: c.textMuted),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(NgRadii.full),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       _tabToggle(c),
@@ -861,99 +1012,109 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     ),
                   )
                 else
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: widget.model.refresh,
-                    child: ListView(
-                      controller: _scroll,
-                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
-                      children: [
-                        _profileRow(c, scope),
-                        _tiles(c),
-                        const SizedBox(height: 8),
-                        _filters(
-                          c,
-                          chats
-                              .where(
-                                (s) =>
-                                    needsYou.contains(s.id) ||
-                                    widget.model.isUnread(s),
-                              )
-                              .length,
-                        ),
-                        if (pinned.isNotEmpty) ...[
-                          NgSectionLabel(ngL.ng_pinned),
-                          for (final s in pinned) _tile(c, s, needsYou),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: widget.model.refresh,
+                      child: ListView(
+                        controller: _scroll,
+                        padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+                        children: [
+                          _tiles(c),
+                          const SizedBox(height: 8),
+                          _filters(
+                            c,
+                            chats
+                                .where(
+                                  (s) =>
+                                      needsYou.contains(s.id) ||
+                                      widget.model.isUnread(s),
+                                )
+                                .length,
+                          ),
+                          if (pinned.isNotEmpty) ...[
+                            NgSectionLabel(ngL.ng_pinned),
+                            for (final s in pinned) _tile(c, s, needsYou),
+                          ],
+                          if (pinned.isNotEmpty && rest.isNotEmpty)
+                            NgSectionLabel(ngL.ng_recent),
+                          if (widget.model.error != null && all.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(
+                                widget.model.error!,
+                                style: NgType.bodySmall.copyWith(
+                                  color: c.danger,
+                                ),
+                              ),
+                            )
+                          else if (!widget.model.loading && filtered.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                switch (_filter) {
+                                  _ when widget.model.query.isNotEmpty =>
+                                    ngL.ng_no_chats_match,
+                                  NgSidebarFilter.all => ngL.ng_no_chats_yet,
+                                  NgSidebarFilter.running =>
+                                    ngL.ng_nothing_is_running,
+                                  NgSidebarFilter.needsYou =>
+                                    ngL.ng_nothing_is_waiting_on_you,
+                                  NgSidebarFilter.crons =>
+                                    AppLocalizations.of(
+                                          context,
+                                        )?.cron_conversations_empty ??
+                                        'Conversations from scheduled jobs appear here, including older runs.',
+                                },
+                                textAlign: TextAlign.center,
+                                style: NgType.bodySmall.copyWith(
+                                  color: c.text3,
+                                ),
+                              ),
+                            ),
+                          for (final s in rest) _tile(c, s, needsYou),
+                          // A short list has no scroll extent, so scroll-only
+                          // paging cannot grow it; offer an explicit read on.
+                          // Ten rows show first; each tap reveals ten more, and
+                          // only then asks the gateway for another page.
+                          if ((hasLocalMore || widget.model.hasMore) &&
+                              !widget.model.loading &&
+                              widget.model.query.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Center(
+                                child: TextButton.icon(
+                                  key: const Key('ng-sessions-load-more'),
+                                  onPressed: () {
+                                    setState(() => _visible += _rowCap);
+                                    if (!hasLocalMore && widget.model.hasMore) {
+                                      unawaited(widget.model.loadMore());
+                                    }
+                                  },
+                                  icon: const Icon(Icons.expand_more, size: 18),
+                                  label: Text(
+                                    AppLocalizations.of(context)?.load_more ??
+                                        'Load more…',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (widget.model.loading)
+                            const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
-                        if (pinned.isNotEmpty && rest.isNotEmpty)
-                          NgSectionLabel(ngL.ng_recent),
-                        if (widget.model.error != null && all.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              widget.model.error!,
-                              style: NgType.bodySmall.copyWith(color: c.danger),
-                            ),
-                          )
-                        else if (!widget.model.loading && filtered.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              switch (_filter) {
-                                _ when widget.model.query.isNotEmpty =>
-                                  ngL.ng_no_chats_match,
-                                NgSidebarFilter.all => ngL.ng_no_chats_yet,
-                                NgSidebarFilter.running =>
-                                  ngL.ng_nothing_is_running,
-                                NgSidebarFilter.needsYou =>
-                                  ngL.ng_nothing_is_waiting_on_you,
-                                NgSidebarFilter.crons =>
-                                  AppLocalizations.of(
-                                        context,
-                                      )?.cron_conversations_empty ??
-                                      'Conversations from scheduled jobs appear here, including older runs.',
-                              },
-                              textAlign: TextAlign.center,
-                              style: NgType.bodySmall.copyWith(color: c.text3),
-                            ),
-                          ),
-                        for (final s in rest) _tile(c, s, needsYou),
-                        // A short list has no scroll extent, so scroll-only
-                        // paging cannot grow it; offer an explicit read on.
-                        if (widget.model.hasMore &&
-                            !widget.model.loading &&
-                            widget.model.query.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Center(
-                              child: TextButton.icon(
-                                key: const Key('ng-sessions-load-more'),
-                                onPressed: widget.model.loadMore,
-                                icon: const Icon(Icons.expand_more, size: 18),
-                                label: Text(
-                                  AppLocalizations.of(context)?.load_more ??
-                                      'Load more…',
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (widget.model.loading)
-                          const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
                 _footer(c, scope),
                 _backendStatus(c, scope),
               ],
@@ -1115,7 +1276,10 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
         side: BorderSide(color: _filter == f ? c.strokeStrong : c.stroke),
         shape: const StadiumBorder(),
         onSelected: (_) {
-          setState(() => _filter = f);
+          setState(() {
+            _filter = f;
+            _visible = _rowCap;
+          });
           widget.model.browseCrons(f == NgSidebarFilter.crons);
         },
       ),
@@ -1217,18 +1381,34 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                           ),
                         ),
                       Expanded(
-                        child: Text(
-                          ngSessionTitle(s),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: NgType.label.copyWith(
-                            color: selected || marked ? c.text : c.text2,
-                            fontWeight: marked
-                                ? FontWeight.w700
-                                : selected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              ngSessionTitle(s),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: NgType.label.copyWith(
+                                color: selected || marked ? c.text : c.text2,
+                                fontWeight: marked
+                                    ? FontWeight.w700
+                                    : selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              widget.model.profileLabelOf(s),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: NgType.caption.copyWith(
+                                color: marked ? c.text2 : c.textMuted,
+                                fontWeight: marked ? FontWeight.w600 : null,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1364,54 +1544,6 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             label: Text(ngL.ng_new_chat),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _profileRow(NgColors c, NgScope scope) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Material(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(NgRadii.md),
-        child: InkWell(
-          key: const Key('ng-sidebar-profile-switch'),
-          borderRadius: BorderRadius.circular(NgRadii.md),
-          onTap: () => showNgProfileSwitcher(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  size: 18,
-                  color: c.accentText,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ngL.switch_profile,
-                        style: NgType.label.copyWith(color: c.text),
-                      ),
-                      Text(
-                        scope.connection.gatewayProfile ?? ngL.ng_server_default,
-                        style: NgType.caption.copyWith(color: c.text3),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.unfold_more,
-                  size: 16,
-                  color: c.text3,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -57,6 +57,11 @@ class Session {
   /// false and must use the exact-session legacy submit transport.
   final bool isLocalDraft;
 
+  /// The Hermes profile that owns this chat, when the gateway enumerated
+  /// chats across profiles (`/api/profiles/sessions`). Null on listings that
+  /// are already scoped to the connection's own profile.
+  final String? profile;
+
   /// The gateway's shared read state (`SessionDB.session_unread`): set when a
   /// client marked the chat unread, or it had activity after a client last
   /// marked it read. False from gateways that don't track it.
@@ -84,6 +89,7 @@ class Session {
     this.lineageRootId,
     this.archived = false,
     this.isLocalDraft = false,
+    this.profile,
     this.unread = false,
     this.lastReadAt,
   });
@@ -116,6 +122,7 @@ class Session {
     lineageRootId: lineageRootId,
     archived: archived,
     isLocalDraft: isLocalDraft,
+    profile: profile,
     unread: unread,
     lastReadAt: lastReadAt,
   );
@@ -139,6 +146,7 @@ class Session {
     lineageRootId: lineageRootId,
     archived: archived,
     isLocalDraft: isLocalDraft,
+    profile: profile,
     unread: unread,
     lastReadAt: lastReadAt,
   );
@@ -162,6 +170,7 @@ class Session {
     lineageRootId: lineageRootId,
     archived: archived,
     isLocalDraft: isLocalDraft,
+    profile: profile,
     unread: unread,
     lastReadAt: lastReadAt,
   );
@@ -185,6 +194,32 @@ class Session {
     lineageRootId: lineageRootId,
     archived: archived,
     isLocalDraft: isLocalDraft,
+    profile: profile,
+    unread: unread,
+    lastReadAt: lastReadAt,
+  );
+
+  /// Rebinds the owning profile when a merged listing's endpoint (per-profile
+  /// search) does not tag its rows.
+  Session withProfile(String? profile) => Session(
+    id: id,
+    title: title,
+    model: model,
+    source: source,
+    messageCount: messageCount,
+    hasKnownMessageCount: hasKnownMessageCount,
+    hasContentPreview: hasContentPreview,
+    isActive: isActive,
+    preview: preview,
+    startedAt: startedAt,
+    endedAt: endedAt,
+    lastActive: lastActive,
+    pinned: pinned,
+    pinKnown: pinKnown,
+    lineageRootId: lineageRootId,
+    archived: archived,
+    isLocalDraft: isLocalDraft,
+    profile: profile,
     unread: unread,
     lastReadAt: lastReadAt,
   );
@@ -209,6 +244,7 @@ class Session {
     lineageRootId: lineageRootId ?? (storedId == id ? null : id),
     archived: archived,
     isLocalDraft: false,
+    profile: profile,
     unread: unread,
     lastReadAt: lastReadAt,
   );
@@ -276,6 +312,11 @@ class Session {
           : null,
       archived: json['archived'] == true,
       isLocalDraft: false,
+      profile:
+          (json['profile'] is String &&
+              (json['profile'] as String).trim().isNotEmpty)
+          ? (json['profile'] as String).trim()
+          : null,
       unread: json['unread'] == true || json['unread'] == 1,
       lastReadAt: json['last_read_at'] is num
           ? (json['last_read_at'] as num).toDouble()

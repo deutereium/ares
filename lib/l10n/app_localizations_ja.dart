@@ -6067,4 +6067,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ng_bot_roster => 'Bots';
+
+  @override
+  String get ng_chats_in_sidebar => 'サイドバーのチャット';
+
+  @override
+  String get ng_how_many_chats_the_sidebar_lists_before_load_more =>
+      '「さらに読み込む」の前にサイドバーに表示するチャット数。';
+
+  @override
+  String get ng_fewer_chats => 'チャットを減らす';
+
+  @override
+  String get ng_more_chats => 'チャットを増やす';
 }

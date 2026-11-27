@@ -137,7 +137,7 @@ class _Fixture {
           model: model,
           currentSessionId: null,
           onOpen: (_) {},
-          onNewChat: () {},
+          onNewChat: (_) {},
           onDestination: (_) {},
         ),
       ),

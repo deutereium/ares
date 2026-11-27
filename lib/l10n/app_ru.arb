@@ -1726,5 +1726,9 @@
   "ng_search_bots": "Search bots and group chats",
   "ng_members": "Members",
   "ng_messages": "Messages",
-  "ng_bot_roster": "Bots"
+  "ng_bot_roster": "Bots",
+  "ng_chats_in_sidebar": "Чаты на боковой панели",
+  "ng_how_many_chats_the_sidebar_lists_before_load_more": "Сколько чатов показывать на боковой панели до «Загрузить ещё».",
+  "ng_fewer_chats": "Меньше чатов",
+  "ng_more_chats": "Больше чатов"
 }
