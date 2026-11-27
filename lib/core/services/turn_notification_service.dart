@@ -243,24 +243,28 @@ class PluginTurnNotificationSink implements TurnNotificationSink {
         AppLocalizations.supportedLocales,
       );
       final strings = lookupAppLocalizations(locale);
-      final sent = await AutoMessagingService.platform
-          .invokeMethod<bool>('show', {
-            'id': notification.id,
-            'title': notification.title,
-            'body': notification.body,
-            'replyLabel': strings.send,
-            'readLabel': strings.ng_mark_as_read,
-            'userLabel': strings.task_role_user,
-            'channelLabel': notification.channel.name,
-            if (notification.senderName?.trim().isNotEmpty == true) ...[
-              'channelId': notification.channel.id,
-              'senderName': notification.senderName!.trim(),
-            ],
-            if (notification.senderAvatar != null)
-              'senderAvatar': base64Encode(notification.senderAvatar!),
-            ...target.data,
-            'ticket': ticket,
-          });
+      final sender = notification.senderName?.trim();
+      final args = <String, dynamic>{
+        'id': notification.id,
+        'title': notification.title,
+        'body': notification.body,
+        'replyLabel': strings.send,
+        'readLabel': strings.ng_mark_as_read,
+        'userLabel': strings.task_role_user,
+        'channelLabel': notification.channel.name,
+        if (notification.senderAvatar != null)
+          'senderAvatar': base64Encode(notification.senderAvatar!),
+        ...target.data,
+        'ticket': ticket,
+      };
+      if (sender != null && sender.isNotEmpty) {
+        args['channelId'] = notification.channel.id;
+        args['senderName'] = sender;
+      }
+      final sent = await AutoMessagingService.platform.invokeMethod<bool>(
+        'show',
+        args,
+      );
       if (sent != true) throw StateError('Conversation authority unavailable');
       return;
     }
