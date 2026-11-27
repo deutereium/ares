@@ -43,6 +43,12 @@ class NgBot {
 
   /// Compare-and-swap revision for that key; null on gateways that don't send it.
   final int? revision;
+
+  /// Desktop's folder identity for this bot, when it carries one.
+  String? get sectionId {
+    final id = meta['sectionId']?.toString().trim() ?? '';
+    return id.isEmpty ? null : id;
+  }
 }
 
 class NgGroupMessage {
@@ -379,6 +385,32 @@ class NgBotsModel extends ChangeNotifier {
       _avatars[name] = avatarBytes;
     }
 
+    // Desktop files a bot by a stable folder id and shows the name; both live
+    // in the bot's ui_meta. Reuse the id another member carries so a folder
+    // made on Desktop keeps one identity, otherwise mint one for the name.
+    String? sectionId;
+    if (sectionName != null) {
+      final wanted = sectionName.trim();
+      if (wanted.isNotEmpty) {
+        for (final bot in bots) {
+          if (bot.name == name &&
+              bot.section == wanted &&
+              bot.sectionId != null) {
+            sectionId = bot.sectionId;
+            break;
+          }
+        }
+        for (final bot in bots) {
+          if (sectionId != null) break;
+          if (bot.section == wanted && bot.sectionId != null) {
+            sectionId = bot.sectionId;
+          }
+        }
+        sectionId ??=
+            'sec-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+      }
+    }
+
     final firstRow = await _readRow(name);
     if (firstRow == null) {
       throw StateError('The gateway no longer lists $name.');
@@ -398,8 +430,10 @@ class NgBotsModel extends ChangeNotifier {
         final cleanSection = sectionName.trim();
         if (cleanSection.isEmpty) {
           next.remove('sectionName');
+          next.remove('sectionId');
         } else {
           next['sectionName'] = cleanSection;
+          next['sectionId'] = sectionId;
         }
       }
       if (removeAvatar) {

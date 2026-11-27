@@ -55,6 +55,8 @@ Map<String, dynamic> _row({
   String name = 'sol',
   String title = 'Old',
   int revision = 4,
+  String? sectionName = 'Work',
+  String? sectionId = 'sec-work',
   Map<String, dynamic> extra = const {},
 }) => {
   'name': name,
@@ -66,7 +68,8 @@ Map<String, dynamic> _row({
     'hermes-bots': {
       'title': title,
       'color': '#ff8800',
-      'sectionName': 'Work',
+      if (sectionName != null) 'sectionName': sectionName,
+      if (sectionId != null) 'sectionId': sectionId,
       ...extra,
     },
   },
@@ -160,6 +163,41 @@ void main() {
     // Fields this client does not own survive the write.
     expect(meta['color'], '#ff8800');
     expect(meta['sectionName'], 'Main');
+    // "Main" had no member here, so the edit mints a folder id for Desktop.
+    expect(meta['sectionId'], isA<String>());
+    expect(meta['sectionId'], startsWith('sec-'));
+    expect(meta['sectionId'], isNot('sec-work'));
+  });
+
+  test('saveBot keeps the folder id Desktop gave a name', () async {
+    final sol = _row();
+    final nanox = _row(name: 'nanox', sectionName: null, sectionId: null);
+    gateway.onCall = (method, params) async => switch (method) {
+      'profiles.list' => {'profiles': [sol, nanox]},
+      'groups.list' => {'rooms': []},
+      _ => <String, dynamic>{},
+    };
+    await model.refresh();
+    gateway.onCall = (method, params) async => switch (method) {
+      'profiles.list' => {'profiles': [sol, nanox]},
+      'profiles.configure' => {
+        'ok': true,
+        'applied': {'ui_meta': true},
+      },
+      _ => <String, dynamic>{},
+    };
+
+    await model.saveBot(
+      name: 'nanox',
+      title: 'N',
+      description: 'role',
+      sectionName: 'Work',
+    );
+
+    final meta = gateway.callsTo('profiles.configure').single['ui_meta'][
+        'hermes-bots'] as Map;
+    expect(meta['sectionName'], 'Work');
+    expect(meta['sectionId'], 'sec-work');
   });
 
   test('saveBot clears the section to move a bot to Unassigned', () async {
@@ -183,6 +221,7 @@ void main() {
     final meta = gateway.callsTo('profiles.configure').single['ui_meta'][
         'hermes-bots'] as Map;
     expect(meta.containsKey('sectionName'), isFalse);
+    expect(meta.containsKey('sectionId'), isFalse);
   });
 
   test('saveBot retries a compare-and-swap conflict against the fresh revision',
