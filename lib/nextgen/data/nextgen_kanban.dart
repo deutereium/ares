@@ -260,7 +260,7 @@ class DashboardKanbanApi implements NgKanbanApi {
 
   @override
   Future<Map<String, dynamic>> board() =>
-      _dashboard.apiGet('$_base/board');
+      _dashboard.apiGet('$_base/board?include_archived=true');
 
   @override
   Future<Map<String, dynamic>> task(String id) =>
