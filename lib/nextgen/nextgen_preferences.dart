@@ -102,18 +102,27 @@ abstract final class NextGenPreferences {
   static const int minSidebarRows = 5;
   static const int maxSidebarRows = 50;
 
+  /// Observed by the open sidebar so a Settings change applies at once.
+  static final ValueNotifier<int> sidebarRowsNotifier = ValueNotifier(
+    defaultSidebarRows,
+  );
+
   static int sidebarRows(SharedPreferences prefs) {
     final value = prefs.getInt(sidebarRowsKey) ?? defaultSidebarRows;
     return value.clamp(minSidebarRows, maxSidebarRows);
   }
 
-  static Future<void> setSidebarRows(SharedPreferences prefs, int value) =>
-      prefs.setInt(sidebarRowsKey, value.clamp(minSidebarRows, maxSidebarRows));
+  static Future<void> setSidebarRows(SharedPreferences prefs, int value) {
+    final rows = value.clamp(minSidebarRows, maxSidebarRows);
+    sidebarRowsNotifier.value = rows;
+    return prefs.setInt(sidebarRowsKey, rows);
+  }
 
   /// Reads every NextGen preference into memory. Synchronous: the shared
   /// [SharedPreferences] instance is already loaded at startup.
   static void load(SharedPreferences prefs) {
     nextGenEnabled.value = prefs.getBool(enabledKey) ?? false;
+    sidebarRowsNotifier.value = sidebarRows(prefs);
     final look = NextGenLook.instance;
     look.themeMode = switch (prefs.getString(themeModeKey)) {
       'light' => ThemeMode.light,

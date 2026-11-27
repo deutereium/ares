@@ -639,6 +639,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   @override
   void initState() {
     super.initState();
+    NextGenPreferences.sidebarRowsNotifier.addListener(_onRowCapChanged);
     _tab = widget.selectedTab ?? NgSidebarTab.sessions;
     _search.text = widget.model.query;
     // The model and its server cursor outlive the drawer. Reopening it must
@@ -710,11 +711,22 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
       _rowsLoaded = true;
       _rowCap = NextGenPreferences.sidebarRows(NgScope.of(context).prefs);
       _visible = _rowCap;
+      NextGenPreferences.sidebarRowsNotifier.value = _rowCap;
     }
+  }
+
+  void _onRowCapChanged() {
+    final cap = NextGenPreferences.sidebarRowsNotifier.value;
+    if (!mounted || cap == _rowCap) return;
+    setState(() {
+      _rowCap = cap;
+      _visible = cap;
+    });
   }
 
   @override
   void dispose() {
+    NextGenPreferences.sidebarRowsNotifier.removeListener(_onRowCapChanged);
     _search.dispose();
     _searchFocus.dispose();
     _scroll.dispose();
