@@ -62,11 +62,7 @@ class _FakeApi implements NgKanbanApi {
   }) async {
     calls.add((
       method: 'move',
-      body: {
-        'id': id,
-        'status': status,
-        if (summary != null) 'summary': summary,
-      },
+      body: {'id': id, 'status': status, 'summary': ?summary?.trim()},
     ));
     return {
       'task': {'id': id, 'title': 'One', 'status': status},

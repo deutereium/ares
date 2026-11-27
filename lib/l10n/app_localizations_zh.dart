@@ -4777,24 +4777,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ng_sessions => '会话';
-  @override
-  String get ng_bots => 'Bots';
-  @override
-  String get ng_group_chats => 'Group chats';
-  @override
-  String get ng_unassigned => 'Unassigned';
-  @override
-  String get ng_no_bots => 'No bots yet';
-  @override
-  String get ng_no_group_chats => 'No group chats yet';
-  @override
-  String get ng_search_bots => 'Search bots and group chats';
-  @override
-  String get ng_members => 'Members';
-  @override
-  String get ng_messages => 'Messages';
-  @override
-  String get ng_bot_roster => 'Bots';
 
   @override
   String get ng_tokens => '令牌';
@@ -5972,6 +5954,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ng_slash_suggestions_skill => '技能';
+
+  @override
+  String get ng_bots => 'Bots';
+
+  @override
+  String get ng_group_chats => 'Group chats';
+
+  @override
+  String get ng_unassigned => 'Unassigned';
+
+  @override
+  String get ng_no_bots => 'No bots yet';
+
+  @override
+  String get ng_no_group_chats => 'No group chats yet';
+
+  @override
+  String get ng_search_bots => 'Search bots and group chats';
+
+  @override
+  String get ng_members => 'Members';
+
+  @override
+  String get ng_messages => 'Messages';
+
+  @override
+  String get ng_bot_roster => 'Bots';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -10810,6 +10819,75 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ng_delete => '删除';
 
   @override
+  String get ng_description => '描述';
+
+  @override
+  String get ng_folder => '文件夹';
+
+  @override
+  String get ng_kanban => '看板';
+
+  @override
+  String get ng_new_task => '新建任务';
+
+  @override
+  String get ng_task_title => '标题';
+
+  @override
+  String get ng_assignee => '负责人';
+
+  @override
+  String get ng_priority => '优先级';
+
+  @override
+  String get ng_add_comment => '添加评论';
+
+  @override
+  String get ng_no_tasks => '没有任务';
+
+  @override
+  String get ng_move_to => '移动到';
+
+  @override
+  String get ng_couldn_t_load_kanban => '无法加载看板';
+
+  @override
+  String get ng_kanban_triage => '待分类';
+
+  @override
+  String get ng_kanban_todo => '待办';
+
+  @override
+  String get ng_kanban_blocked => '已阻塞';
+
+  @override
+  String get ng_kanban_review => '审核';
+
+  @override
+  String get ng_kanban_done => '完成';
+
+  @override
+  String get ng_new_group_chat => '新建群聊';
+
+  @override
+  String get ng_group_name => '群聊名称';
+
+  @override
+  String get ng_select_members => '选择成员';
+
+  @override
+  String get ng_completion_note => '完成备注';
+
+  @override
+  String get ng_completion_note_hint => '做了什么？网关会将其记录为任务结果。';
+
+  @override
+  String get ng_place_in => '放入';
+
+  @override
+  String get ng_group_member_range => '请选择 2 到 6 个机器人。';
+
+  @override
   String get ng_delete_this_job => '删除此任务？';
 
   @override
@@ -11663,4 +11741,31 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get ng_slash_suggestions_skill => '技能';
+
+  @override
+  String get ng_bots => 'Bots';
+
+  @override
+  String get ng_group_chats => 'Group chats';
+
+  @override
+  String get ng_unassigned => 'Unassigned';
+
+  @override
+  String get ng_no_bots => 'No bots yet';
+
+  @override
+  String get ng_no_group_chats => 'No group chats yet';
+
+  @override
+  String get ng_search_bots => 'Search bots and group chats';
+
+  @override
+  String get ng_members => 'Members';
+
+  @override
+  String get ng_messages => 'Messages';
+
+  @override
+  String get ng_bot_roster => 'Bots';
 }

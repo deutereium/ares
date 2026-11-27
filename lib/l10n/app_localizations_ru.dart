@@ -4990,24 +4990,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ng_sessions => 'Сеансы';
-  @override
-  String get ng_bots => 'Bots';
-  @override
-  String get ng_group_chats => 'Group chats';
-  @override
-  String get ng_unassigned => 'Unassigned';
-  @override
-  String get ng_no_bots => 'No bots yet';
-  @override
-  String get ng_no_group_chats => 'No group chats yet';
-  @override
-  String get ng_search_bots => 'Search bots and group chats';
-  @override
-  String get ng_members => 'Members';
-  @override
-  String get ng_messages => 'Messages';
-  @override
-  String get ng_bot_roster => 'Bots';
 
   @override
   String get ng_tokens => 'Токены';
@@ -5338,7 +5320,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ng_completion_note => 'Заметка о завершении';
 
   @override
-  String get ng_completion_note_hint => 'Что было сделано? Шлюз сохранит это как результат карточки.';
+  String get ng_completion_note_hint =>
+      'Что было сделано? Шлюз сохранит это как результат карточки.';
 
   @override
   String get ng_place_in => 'Поместить в';
@@ -6239,4 +6222,31 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ng_slash_suggestions_skill => 'Навык';
+
+  @override
+  String get ng_bots => 'Bots';
+
+  @override
+  String get ng_group_chats => 'Group chats';
+
+  @override
+  String get ng_unassigned => 'Unassigned';
+
+  @override
+  String get ng_no_bots => 'No bots yet';
+
+  @override
+  String get ng_no_group_chats => 'No group chats yet';
+
+  @override
+  String get ng_search_bots => 'Search bots and group chats';
+
+  @override
+  String get ng_members => 'Members';
+
+  @override
+  String get ng_messages => 'Messages';
+
+  @override
+  String get ng_bot_roster => 'Bots';
 }

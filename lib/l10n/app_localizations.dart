@@ -8334,34 +8334,6 @@ abstract class AppLocalizations {
   /// **'Sessions'**
   String get ng_sessions;
 
-  /// No description provided for @ng_bots.
-  String get ng_bots;
-
-  /// No description provided for @ng_group_chats.
-  String get ng_group_chats;
-
-  /// No description provided for @ng_unassigned.
-  String get ng_unassigned;
-
-  /// No description provided for @ng_no_bots.
-  String get ng_no_bots;
-
-  /// No description provided for @ng_no_group_chats.
-  String get ng_no_group_chats;
-
-  /// No description provided for @ng_search_bots.
-  String get ng_search_bots;
-
-  /// No description provided for @ng_members.
-  String get ng_members;
-
-  /// No description provided for @ng_messages.
-  String get ng_messages;
-
-  /// No description provided for @ng_bot_roster.
-  String get ng_bot_roster;
-
-
   /// No description provided for @ng_tokens.
   ///
   /// In en, this message translates to:
@@ -8953,19 +8925,19 @@ abstract class AppLocalizations {
   /// No description provided for @ng_completion_note.
   ///
   /// In en, this message translates to:
-  /// **"Completion note"**
+  /// **'Completion note'**
   String get ng_completion_note;
 
   /// No description provided for @ng_completion_note_hint.
   ///
   /// In en, this message translates to:
-  /// **"What was done? The gateway records this as the card's result."**
+  /// **'What was done? The gateway records this as the card\'s result.'**
   String get ng_completion_note_hint;
 
   /// No description provided for @ng_place_in.
   ///
   /// In en, this message translates to:
-  /// **"Place in"**
+  /// **'Place in'**
   String get ng_place_in;
 
   /// No description provided for @ng_group_member_range.
@@ -8973,6 +8945,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick 2 to 6 bots.'**
   String get ng_group_member_range;
+
   /// No description provided for @ng_delete_this_job.
   ///
   /// In en, this message translates to:
@@ -10448,6 +10421,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skill'**
   String get ng_slash_suggestions_skill;
+
+  /// No description provided for @ng_bots.
+  ///
+  /// In en, this message translates to:
+  /// **'Bots'**
+  String get ng_bots;
+
+  /// No description provided for @ng_group_chats.
+  ///
+  /// In en, this message translates to:
+  /// **'Group chats'**
+  String get ng_group_chats;
+
+  /// No description provided for @ng_unassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get ng_unassigned;
+
+  /// No description provided for @ng_no_bots.
+  ///
+  /// In en, this message translates to:
+  /// **'No bots yet'**
+  String get ng_no_bots;
+
+  /// No description provided for @ng_no_group_chats.
+  ///
+  /// In en, this message translates to:
+  /// **'No group chats yet'**
+  String get ng_no_group_chats;
+
+  /// No description provided for @ng_search_bots.
+  ///
+  /// In en, this message translates to:
+  /// **'Search bots and group chats'**
+  String get ng_search_bots;
+
+  /// No description provided for @ng_members.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get ng_members;
+
+  /// No description provided for @ng_messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get ng_messages;
+
+  /// No description provided for @ng_bot_roster.
+  ///
+  /// In en, this message translates to:
+  /// **'Bots'**
+  String get ng_bot_roster;
 }
 
 class _AppLocalizationsDelegate

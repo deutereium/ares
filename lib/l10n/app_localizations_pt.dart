@@ -4996,24 +4996,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ng_sessions => 'Sessões';
-  @override
-  String get ng_bots => 'Bots';
-  @override
-  String get ng_group_chats => 'Group chats';
-  @override
-  String get ng_unassigned => 'Unassigned';
-  @override
-  String get ng_no_bots => 'No bots yet';
-  @override
-  String get ng_no_group_chats => 'No group chats yet';
-  @override
-  String get ng_search_bots => 'Search bots and group chats';
-  @override
-  String get ng_members => 'Members';
-  @override
-  String get ng_messages => 'Messages';
-  @override
-  String get ng_bot_roster => 'Bots';
 
   @override
   String get ng_tokens => 'Tokens';
@@ -5344,7 +5326,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get ng_completion_note => 'Nota de conclusão';
 
   @override
-  String get ng_completion_note_hint => 'O que foi feito? O gateway registra como resultado do cartão.';
+  String get ng_completion_note_hint =>
+      'O que foi feito? O gateway registra como resultado do cartão.';
 
   @override
   String get ng_place_in => 'Colocar em';
@@ -6240,6 +6223,33 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ng_slash_suggestions_skill => 'Competência';
+
+  @override
+  String get ng_bots => 'Bots';
+
+  @override
+  String get ng_group_chats => 'Group chats';
+
+  @override
+  String get ng_unassigned => 'Unassigned';
+
+  @override
+  String get ng_no_bots => 'No bots yet';
+
+  @override
+  String get ng_no_group_chats => 'No group chats yet';
+
+  @override
+  String get ng_search_bots => 'Search bots and group chats';
+
+  @override
+  String get ng_members => 'Members';
+
+  @override
+  String get ng_messages => 'Messages';
+
+  @override
+  String get ng_bot_roster => 'Bots';
 }
 
 /// The translations for Portuguese, as used in Brazil (`pt_BR`).
@@ -11306,6 +11316,76 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
   String get ng_delete => 'Excluir';
 
   @override
+  String get ng_description => 'Descrição';
+
+  @override
+  String get ng_folder => 'Pasta';
+
+  @override
+  String get ng_kanban => 'Kanban';
+
+  @override
+  String get ng_new_task => 'Nova tarefa';
+
+  @override
+  String get ng_task_title => 'Título';
+
+  @override
+  String get ng_assignee => 'Atribuído a';
+
+  @override
+  String get ng_priority => 'Prioridade';
+
+  @override
+  String get ng_add_comment => 'Adicionar comentário';
+
+  @override
+  String get ng_no_tasks => 'Nenhuma tarefa';
+
+  @override
+  String get ng_move_to => 'Mover para';
+
+  @override
+  String get ng_couldn_t_load_kanban => 'Não foi possível carregar o Kanban';
+
+  @override
+  String get ng_kanban_triage => 'Triagem';
+
+  @override
+  String get ng_kanban_todo => 'A fazer';
+
+  @override
+  String get ng_kanban_blocked => 'Bloqueado';
+
+  @override
+  String get ng_kanban_review => 'Revisão';
+
+  @override
+  String get ng_kanban_done => 'Concluído';
+
+  @override
+  String get ng_new_group_chat => 'Novo chat de grupo';
+
+  @override
+  String get ng_group_name => 'Nome do grupo';
+
+  @override
+  String get ng_select_members => 'Selecionar membros';
+
+  @override
+  String get ng_completion_note => 'Nota de conclusão';
+
+  @override
+  String get ng_completion_note_hint =>
+      'O que foi feito? O gateway registra como resultado do cartão.';
+
+  @override
+  String get ng_place_in => 'Colocar em';
+
+  @override
+  String get ng_group_member_range => 'Escolha de 2 a 6 bots.';
+
+  @override
   String get ng_delete_this_job => 'Excluir este agendamento?';
 
   @override
@@ -12193,4 +12273,31 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get ng_slash_suggestions_skill => 'Habilidade';
+
+  @override
+  String get ng_bots => 'Bots';
+
+  @override
+  String get ng_group_chats => 'Group chats';
+
+  @override
+  String get ng_unassigned => 'Unassigned';
+
+  @override
+  String get ng_no_bots => 'No bots yet';
+
+  @override
+  String get ng_no_group_chats => 'No group chats yet';
+
+  @override
+  String get ng_search_bots => 'Search bots and group chats';
+
+  @override
+  String get ng_members => 'Members';
+
+  @override
+  String get ng_messages => 'Messages';
+
+  @override
+  String get ng_bot_roster => 'Bots';
 }
