@@ -68,8 +68,8 @@ Map<String, dynamic> _row({
     'hermes-bots': {
       'title': title,
       'color': '#ff8800',
-      if (sectionName != null) 'sectionName': sectionName,
-      if (sectionId != null) 'sectionId': sectionId,
+      'sectionName': ?sectionName,
+      'sectionId': ?sectionId,
       ...extra,
     },
   },
