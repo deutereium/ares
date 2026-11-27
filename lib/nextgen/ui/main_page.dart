@@ -724,7 +724,12 @@ class _NgMainPageState extends State<_NgMainContent>
       onPopInvokedWithResult: (didPop, _) => _onBack(didPop),
       child: Scaffold(
         key: _scaffold,
+        // Both sidebars open from their screen edge: swipe right for chats,
+        // swipe left for destinations.
+        drawerEnableOpenDragGesture: true,
+        endDrawerEnableOpenDragGesture: true,
         drawerEdgeDragWidth: 48,
+        endDrawerEdgeDragWidth: 48,
         onDrawerChanged: (open) {
           _sessions?.drawerOpen = open;
           if (open) {
