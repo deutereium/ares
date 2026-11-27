@@ -729,7 +729,6 @@ class _NgMainPageState extends State<_NgMainContent>
         drawerEnableOpenDragGesture: true,
         endDrawerEnableOpenDragGesture: true,
         drawerEdgeDragWidth: 48,
-        endDrawerEdgeDragWidth: 48,
         onDrawerChanged: (open) {
           _sessions?.drawerOpen = open;
           if (open) {
