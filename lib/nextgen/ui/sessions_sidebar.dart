@@ -1151,7 +1151,10 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+                  // The compact search is 3px shorter than the full-width
+                  // field it replaced; the extra bottom space keeps the chat
+                  // list at exactly the same offset.
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 9),
                   child: Row(
                     children: [
                       _searchField(c),
