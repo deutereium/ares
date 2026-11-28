@@ -2552,7 +2552,7 @@ class _ToolRowState extends State<_ToolRow>
     final saved = result?['success'] != false && !t.failed;
     final message = _toolMessage(result);
     final count = result?['entry_count'];
-    final purple = _memoryPurple(context);
+    final purple = c.memory;
     final orange = c.warning;
     if (saved) {
       return Container(
@@ -3106,11 +3106,6 @@ const Set<String> _hiddenResultKeys = {
   'hint',
   'usage_hint',
 };
-
-Color _memoryPurple(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFFB69CFF)
-    : const Color(0xFF7C3AED);
 
 enum _DiffKind { add, remove, context, meta }
 

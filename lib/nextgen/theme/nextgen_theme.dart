@@ -90,6 +90,7 @@ class NgColors extends ThemeExtension<NgColors> {
   final Color danger;
   final Color success;
   final Color warning;
+  final Color memory;
   final Color dangerSoft;
   final Color successSoft;
   final Color warningSoft;
@@ -122,6 +123,7 @@ class NgColors extends ThemeExtension<NgColors> {
     required this.danger,
     required this.success,
     required this.warning,
+    required this.memory,
     required this.dangerSoft,
     required this.successSoft,
     required this.warningSoft,
@@ -171,6 +173,7 @@ class NgColors extends ThemeExtension<NgColors> {
         danger: danger,
         success: success,
         warning: warning,
+        memory: const Color(0xFF7C3AED),
         dangerSoft: danger.withValues(alpha: 0.09),
         successSoft: success.withValues(alpha: 0.10),
         warningSoft: warning.withValues(alpha: 0.10),
@@ -211,6 +214,7 @@ class NgColors extends ThemeExtension<NgColors> {
       danger: danger,
       success: success,
       warning: warning,
+      memory: const Color(0xFFB69CFF),
       dangerSoft: danger.withValues(alpha: 0.14),
       successSoft: success.withValues(alpha: 0.13),
       warningSoft: warning.withValues(alpha: 0.13),
@@ -252,6 +256,7 @@ class NgColors extends ThemeExtension<NgColors> {
       danger: l(danger, other.danger),
       success: l(success, other.success),
       warning: l(warning, other.warning),
+      memory: l(memory, other.memory),
       dangerSoft: l(dangerSoft, other.dangerSoft),
       successSoft: l(successSoft, other.successSoft),
       warningSoft: l(warningSoft, other.warningSoft),
