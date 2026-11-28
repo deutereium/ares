@@ -231,8 +231,10 @@ Future<void> _app(
 
 Future<void> _browse(WidgetTester tester, {bool main = false}) async {
   if (main) {
+    // Destinations, including More, moved from the left drawer to the
+    // right-hand Destinations drawer.
     final chat = tester.widget<NgChatView>(find.byType(NgChatView));
-    chat.onOpenSidebar();
+    chat.onOpenDestinations?.call();
     await _frames(tester);
     await tester.tap(find.text('More'));
     await _frames(tester);

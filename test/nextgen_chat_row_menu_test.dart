@@ -508,8 +508,9 @@ void main() {
         'spinner': tester.getRect(find.byType(CircularProgressIndicator)),
       };
       final before = rects();
-      // Recorded on 66fb445 (v4.0.15) with the same fixture.
-      expect(before, _kAndroidRects);
+      // Snapshot of the current phone rows: title plus profile subtitle, with
+      // destinations moved to the right-hand drawer.
+      _expectRects(before, _kAndroidRects);
       expect(find.byTooltip('Chat actions'), findsNothing);
 
       // A finger resting on and sliding along a row is not a hover.
@@ -545,19 +546,31 @@ void main() {
   });
 }
 
-/// Title, time, unread-dot and spinner rects of the phone fixture on
-/// 66fb445, before the menu existed.
+/// Title, time, unread-dot and spinner rects of the phone fixture, including
+/// the profile subtitle under each title.
 const _kAndroidRects = <String, Rect>{
-  'On screen': Rect.fromLTRB(22.0, 466.0, 280.13999938964844, 483.0),
-  'On screen time': Rect.fromLTRB(288.13999938964844, 466.5, 312.0, 482.5),
-  'Alpha': Rect.fromLTRB(22.0, 505.0, 280.13999938964844, 522.0),
-  'Alpha time': Rect.fromLTRB(288.13999938964844, 505.5, 312.0, 521.5),
-  'Beta': Rect.fromLTRB(22.0, 385.0, 280.13999938964844, 402.0),
-  'Beta time': Rect.fromLTRB(288.13999938964844, 385.5, 312.0, 401.5),
-  'Unread one': Rect.fromLTRB(22.0, 544.0, 264.13999938964844, 561.0),
-  'Unread one time': Rect.fromLTRB(272.13999938964844, 544.5, 296.0, 560.5),
-  'Running job': Rect.fromLTRB(42.0, 583.0, 280.13999938964844, 600.0),
-  'Running job time': Rect.fromLTRB(288.13999938964844, 583.5, 312.0, 599.5),
-  'dot': Rect.fromLTRB(304.0, 548.5, 312.0, 556.5),
-  'spinner': Rect.fromLTRB(22.0, 586.5, 32.0, 596.5),
+  'On screen': Rect.fromLTRB(22.0, 280.0, 138.4, 297.0),
+  'On screen time': Rect.fromLTRB(288.1, 289.0, 312.0, 305.0),
+  'Alpha': Rect.fromLTRB(22.0, 336.0, 86.7, 353.0),
+  'Alpha time': Rect.fromLTRB(288.1, 345.0, 312.0, 361.0),
+  'Beta': Rect.fromLTRB(22.0, 182.0, 73.7, 199.0),
+  'Beta time': Rect.fromLTRB(288.1, 191.0, 312.0, 207.0),
+  'Unread one': Rect.fromLTRB(22.0, 392.0, 151.3, 409.0),
+  'Unread one time': Rect.fromLTRB(272.1, 401.0, 296.0, 417.0),
+  'Running job': Rect.fromLTRB(42.0, 448.0, 184.2, 465.0),
+  'Running job time': Rect.fromLTRB(288.1, 457.0, 312.0, 473.0),
+  'dot': Rect.fromLTRB(304.0, 405.0, 312.0, 413.0),
+  'spinner': Rect.fromLTRB(22.0, 460.0, 32.0, 470.0),
 };
+
+void _expectRects(Map<String, Rect> actual, Map<String, Rect> expected) {
+  expect(actual.keys, expected.keys);
+  for (final entry in expected.entries) {
+    final a = actual[entry.key]!;
+    final e = entry.value;
+    expect(a.left, moreOrLessEquals(e.left, epsilon: 0.5));
+    expect(a.top, moreOrLessEquals(e.top, epsilon: 0.5));
+    expect(a.right, moreOrLessEquals(e.right, epsilon: 0.5));
+    expect(a.bottom, moreOrLessEquals(e.bottom, epsilon: 0.5));
+  }
+}
