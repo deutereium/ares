@@ -2293,9 +2293,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get send_test_notification => 'Enviar notificación de prueba';
 
   @override
-  String get session_sources => 'Fuentes de sesiones';
-
-  @override
   String get session_deleted_from_remote_hermes =>
       'Sesión eliminada del Hermes remoto.';
 
@@ -3117,9 +3114,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get connect => 'Conectar';
-
-  @override
-  String get appearance => 'Apariencia';
 
   @override
   String get connection_section => 'Conexión';
@@ -5539,9 +5533,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ng_summary => 'Resumen';
-
-  @override
-  String get classic_interface_only => 'Solo para la interfaz clásica';
 
   @override
   String get attachment_preview_too_large =>

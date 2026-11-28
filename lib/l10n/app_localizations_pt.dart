@@ -2292,9 +2292,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get send_test_notification => 'Enviar notificação de teste';
 
   @override
-  String get session_sources => 'Fontes de sessões';
-
-  @override
   String get session_deleted_from_remote_hermes =>
       'Sessão excluída do Hermes remoto.';
 
@@ -3117,9 +3114,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get connect => 'Conectar';
-
-  @override
-  String get appearance => 'Aparência';
 
   @override
   String get connection_section => 'Conexão';
@@ -5540,9 +5534,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ng_summary => 'Resumo';
-
-  @override
-  String get classic_interface_only => 'Apenas interface clássica';
 
   @override
   String get attachment_preview_too_large =>
@@ -8459,9 +8450,6 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
   String get send_test_notification => 'Enviar notificação de teste';
 
   @override
-  String get session_sources => 'Fontes de sessões';
-
-  @override
   String get session_deleted_from_remote_hermes =>
       'Sessão excluída do Hermes remoto.';
 
@@ -9275,9 +9263,6 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get connect => 'Conectar';
-
-  @override
-  String get appearance => 'Aparência';
 
   @override
   String get connection_section => 'Conexão';
@@ -11583,9 +11568,6 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get ng_summary => 'Resumo';
-
-  @override
-  String get classic_interface_only => 'Somente interface clássica';
 
   @override
   String get attachment_preview_too_large =>

@@ -17,9 +17,7 @@ import '../widgets/background_work_settings.dart';
 import '../services/turn_notification_service.dart';
 import '../widgets/config_backup_card.dart';
 import '../widgets/mobile_push_settings.dart';
-import '../widgets/chat_density_settings_card.dart';
 import '../widgets/text_size_settings_card.dart';
-import '../widgets/theme_palette_picker.dart';
 import '../theme/hermes_theme.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -47,14 +45,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(context.l10n.settings)),
     body: _buildBody(),
-  );
-
-  Widget _buildChatDensityCard() => ChatDensitySettingsCard(
-    preferences: context
-        .findAncestorStateOfType<HermesAppState>()!
-        .widget
-        .connManager
-        .prefs,
   );
 
   Widget _buildBody() {
@@ -113,17 +103,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        // ---- Section: Theme ----
-        _buildSectionHeader(context.l10n.appearance, classicOnly: true),
-        ThemeAppearanceSettings(
-          preferences: app.widget.connManager.prefs,
-          onChanged: app.refreshAppearancePreferences,
-        ),
-        const SizedBox(height: 8),
-        _buildChatDensityCard(),
-        const SizedBox(height: 8),
-        _VerboseToggle(),
-        const SizedBox(height: 16),
 
         // ---- Section: Text size (both interfaces) ----
         _buildSectionHeader(context.l10n.text_size),
@@ -158,16 +137,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // ---- Section: Voice ----
         if (!isParkedAutomotive) ...[
-          _buildSectionHeader(context.l10n.voice, classicOnly: true),
+          _buildSectionHeader(context.l10n.voice),
           _VoicePicker(),
           const SizedBox(height: 8),
           const _HandsFreeToggle(),
           const SizedBox(height: 16),
         ],
-        // ---- Section: Session Sources ----
-        _buildSectionHeader(context.l10n.session_sources, classicOnly: true),
-        _SessionSourcesFilter(connectionId: widget.connection.id),
-        const SizedBox(height: 16),
 
         // ---- Section: Connection ----
         _buildSectionHeader(context.l10n.connection_section),
@@ -243,42 +218,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return result;
   }
 
-  /// [classicOnly] marks options that only change the classic interface;
-  /// NextGen keeps its own appearance and chat options in its Settings.
-  Widget _buildSectionHeader(String title, {bool classicOnly = false}) {
+  Widget _buildSectionHeader(String title) {
     final theme = Theme.of(context);
-    final heading = Text(
-      title,
-      style: theme.textTheme.titleSmall?.copyWith(
-        color: theme.colorScheme.primary,
-      ),
-    );
-    if (!classicOnly) {
-      return Padding(padding: const EdgeInsets.only(bottom: 8), child: heading);
-    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          heading,
-          Container(
-            key: ValueKey('classic-only-$title'),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.outline),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              context.l10n.classic_interface_only,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: HermesTokens.of(context).muted,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(
+          color: theme.colorScheme.primary,
+        ),
       ),
     );
   }
@@ -455,48 +403,6 @@ class _AboutCardState extends State<_AboutCard> {
   }
 }
 
-/// Toggle for verbose mode — shows tool calls, thinking, and message metadata in chat.
-class _VerboseToggle extends StatefulWidget {
-  @override
-  State<_VerboseToggle> createState() => _VerboseToggleState();
-}
-
-class _VerboseToggleState extends State<_VerboseToggle> {
-  bool _verbose = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _verbose = prefs.getBool('verbose_mode') ?? false);
-  }
-
-  Future<void> _set(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('verbose_mode', value);
-    setState(() => _verbose = value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: SwitchListTile(
-        title: Text(context.l10n.verbose_mode),
-        subtitle: Text(
-          context.l10n.show_tool_calls_thinking_and_message_metadata,
-        ),
-        secondary: const Icon(Icons.terminal),
-        value: _verbose,
-        onChanged: _set,
-      ),
-    );
-  }
-}
-
 class _HandsFreeToggle extends StatelessWidget {
   const _HandsFreeToggle();
 
@@ -657,93 +563,6 @@ class _VoicePickerState extends State<_VoicePicker> {
       ),
       items: items,
       onChanged: _set,
-    );
-  }
-}
-
-/// Checkbox list of session sources. Unchecked sources are filtered
-/// client-side from the fetched session list by `Session.source`.
-class _SessionSourcesFilter extends StatefulWidget {
-  final String connectionId;
-  const _SessionSourcesFilter({required this.connectionId});
-
-  @override
-  State<_SessionSourcesFilter> createState() => _SessionSourcesFilterState();
-}
-
-class _SessionSourcesFilterState extends State<_SessionSourcesFilter> {
-  /// Known session source types. Hermes Gateway persists `session.source` for
-  /// every session. Sources not in this list are always shown (whitelisted).
-  Map<String, String> get _knownSources => {
-    'acp': context.l10n.autonomous_agents,
-    'api_server': context.l10n.external_api_clients,
-    'cli': context.l10n.command_line_chats,
-    'cron': context.l10n.scheduled_tasks,
-    'desktop': context.l10n.desktop_app,
-    'discord': context.l10n.discord_chats,
-    'gateway': context.l10n.gateway_api_access,
-    'mobile': context.l10n.phone_or_tablet,
-    'signal': context.l10n.signal_messages,
-    'slack': context.l10n.slack_chats,
-    'telegram': context.l10n.telegram_messages,
-    'tool': context.l10n.developer_tool_calls,
-    'tui': context.l10n.terminal_sessions,
-    'whatsapp': context.l10n.whatsapp_messages,
-  };
-
-  Set<String> _excluded = {};
-
-  String get _prefsKey => 'excluded_session_sources_${widget.connectionId}';
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _excluded = prefs.getStringList(_prefsKey)?.toSet() ?? {};
-    });
-  }
-
-  Future<void> _toggle(String source, bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      if (enabled) {
-        _excluded.remove(source);
-      } else {
-        _excluded.add(source);
-      }
-    });
-    await prefs.setStringList(_prefsKey, _excluded.toList());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Column(
-        children: _knownSources.entries.map((entry) {
-          final source = entry.key;
-          final label = entry.value;
-          final isVisible = !_excluded.contains(source);
-          return CheckboxListTile(
-            title: Text(label),
-            subtitle: Text(
-              source,
-              style: TextStyle(
-                fontSize: 12,
-                color: HermesTokens.of(context).muted,
-              ),
-            ),
-            value: isVisible,
-            onChanged: (val) => _toggle(source, val ?? true),
-            dense: true,
-            controlAffinity: ListTileControlAffinity.leading,
-          );
-        }).toList(),
-      ),
     );
   }
 }

@@ -92,12 +92,41 @@ Future<void> drain(WidgetTester tester) async {
   }
 }
 
+/// Moves the binding through the legal lifecycle ladder so listeners that
+/// assert on transitions (AppLifecycleListener) see a valid sequence.
+Future<void> setLifecycle(WidgetTester tester, AppLifecycleState target) async {
+  const path = [
+    AppLifecycleState.resumed,
+    AppLifecycleState.inactive,
+    AppLifecycleState.hidden,
+    AppLifecycleState.paused,
+  ];
+  final binding = tester.binding;
+  final current = binding.lifecycleState;
+  if (current == null) {
+    binding.handleAppLifecycleStateChanged(target);
+    return;
+  }
+  final from = path.indexOf(current);
+  final to = path.indexOf(target);
+  if (from == to) return;
+  if (from < 0 || to < 0) {
+    binding.handleAppLifecycleStateChanged(target);
+    return;
+  }
+  final step = to > from ? 1 : -1;
+  for (var i = from + step; ; i += step) {
+    binding.handleAppLifecycleStateChanged(path[i]);
+    if (i == to) break;
+  }
+}
+
 Future<MobilePushService> _mountBackground(
   WidgetTester tester,
   _Activities owner,
   _FaultSink sink,
 ) async {
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  await setLifecycle(tester, AppLifecycleState.resumed);
   final prefs = await SharedPreferences.getInstance();
   final push = MobilePushService(supported: false);
   await tester.pumpWidget(
@@ -109,7 +138,7 @@ Future<MobilePushService> _mountBackground(
     ),
   );
   await drain(tester);
-  tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+  await setLifecycle(tester, AppLifecycleState.paused);
   await drain(tester);
   return push;
 }
@@ -220,7 +249,7 @@ void main() {
   testWidgets(
     'QUALITY partial show failure must not lose first-chat cleanup ownership',
     (tester) async {
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await setLifecycle(tester, AppLifecycleState.resumed);
       final prefs = await SharedPreferences.getInstance();
       final owner = _Activities()..activities = [activity('a'), activity('b')];
       final sink = _FaultSink()..failLocal = 'b';
@@ -235,13 +264,13 @@ void main() {
         ),
       );
       await drain(tester);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await setLifecycle(tester, AppLifecycleState.paused);
       await drain(tester);
       expect(sink.attempts, containsAllInOrder(['a', 'b']));
       expect(sink.live.values.map((n) => n.title), ['Chat a']);
       owner.replace([]); // Both actual turns settle; foreground service stops.
       await drain(tester);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await setLifecycle(tester, AppLifecycleState.resumed);
       await drain(tester);
       await tester.pumpWidget(const SizedBox());
       await drain(tester);

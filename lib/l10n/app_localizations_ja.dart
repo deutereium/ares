@@ -2235,9 +2235,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get send_test_notification => 'テスト通知を送信';
 
   @override
-  String get session_sources => 'セッションのソース';
-
-  @override
   String get session_deleted_from_remote_hermes => 'リモートのHermesからセッションを削除しました。';
 
   @override
@@ -3038,9 +3035,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get connect => '接続';
-
-  @override
-  String get appearance => '外観';
 
   @override
   String get connection_section => '接続';
@@ -5378,9 +5372,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ng_summary => '要約';
-
-  @override
-  String get classic_interface_only => 'クラシック インターフェースのみ';
 
   @override
   String get attachment_preview_too_large =>

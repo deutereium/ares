@@ -2233,9 +2233,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get send_test_notification => '테스트 알림 보내기';
 
   @override
-  String get session_sources => '세션 소스';
-
-  @override
   String get session_deleted_from_remote_hermes => '원격 Hermes에서 세션이 삭제되었습니다.';
 
   @override
@@ -3039,9 +3036,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get connect => '연결';
-
-  @override
-  String get appearance => '모양';
 
   @override
   String get connection_section => '연결';
@@ -5378,9 +5372,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ng_summary => '요약';
-
-  @override
-  String get classic_interface_only => '클래식 인터페이스 전용';
 
   @override
   String get attachment_preview_too_large =>

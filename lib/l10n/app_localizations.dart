@@ -3970,12 +3970,6 @@ abstract class AppLocalizations {
   /// **'Send test notification'**
   String get send_test_notification;
 
-  /// No description provided for @session_sources.
-  ///
-  /// In en, this message translates to:
-  /// **'Session Sources'**
-  String get session_sources;
-
   /// No description provided for @session_deleted_from_remote_hermes.
   ///
   /// In en, this message translates to:
@@ -5260,12 +5254,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connect'**
   String get connect;
-
-  /// No description provided for @appearance.
-  ///
-  /// In en, this message translates to:
-  /// **'Appearance'**
-  String get appearance;
 
   /// No description provided for @connection_section.
   ///
@@ -9323,12 +9311,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Summary'**
   String get ng_summary;
-
-  /// No description provided for @classic_interface_only.
-  ///
-  /// In en, this message translates to:
-  /// **'Classic interface only'**
-  String get classic_interface_only;
 
   /// No description provided for @attachment_preview_too_large.
   ///

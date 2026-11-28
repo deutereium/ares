@@ -2287,9 +2287,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get send_test_notification => 'Отправить тестовое уведомление';
 
   @override
-  String get session_sources => 'Источники сессий';
-
-  @override
   String get session_deleted_from_remote_hermes =>
       'Сессия удалена из удалённого Hermes.';
 
@@ -3124,9 +3121,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get connect => 'Подключиться';
-
-  @override
-  String get appearance => 'Внешний вид';
 
   @override
   String get connection_section => 'Подключение';
@@ -5533,9 +5527,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ng_summary => 'Сводка';
-
-  @override
-  String get classic_interface_only => 'Только классический интерфейс';
 
   @override
   String get attachment_preview_too_large =>

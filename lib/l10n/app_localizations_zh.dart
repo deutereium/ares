@@ -2197,9 +2197,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get send_test_notification => '发送测试通知';
 
   @override
-  String get session_sources => '会话来源';
-
-  @override
   String get session_deleted_from_remote_hermes => '已从远程 Hermes 中删除会话。';
 
   @override
@@ -2996,9 +2993,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get connect => '连接';
-
-  @override
-  String get appearance => '外观';
 
   @override
   String get connection_section => '连接';
@@ -5302,9 +5296,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ng_summary => '摘要';
-
-  @override
-  String get classic_interface_only => '仅限经典界面';
 
   @override
   String get attachment_preview_too_large =>
@@ -8100,9 +8091,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get send_test_notification => '发送测试通知';
 
   @override
-  String get session_sources => '会话来源';
-
-  @override
   String get session_deleted_from_remote_hermes => '已从远程 Hermes 中删除会话。';
 
   @override
@@ -8890,9 +8878,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get connect => '连接';
-
-  @override
-  String get appearance => '外观';
 
   @override
   String get connection_section => '连接';
@@ -11086,9 +11071,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get ng_summary => '摘要';
-
-  @override
-  String get classic_interface_only => '仅限经典界面';
 
   @override
   String get attachment_preview_too_large =>
