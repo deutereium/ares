@@ -434,6 +434,13 @@ internal object MobilePushBridge {
         state.put("issued", last(issued, 256))
         seen.put(event); state.put("seen", last(seen, 256))
         MobilePushStore.write(context, state) // dedup durable before notify
+        if (AppVisibility.foreground) {
+            // The user is already looking at the app. Do not post a system
+            // notification for activity the UI is showing; keep it deduped so
+            // backgrounding later does not replay it.
+            changed()
+            return
+        }
         val manager = context.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(NotificationChannel("hermes_mobile_push", "Private server hints", NotificationManager.IMPORTANCE_DEFAULT))
         val intent = Intent(context, MainActivity::class.java).setAction(TAP_ACTION)

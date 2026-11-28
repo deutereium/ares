@@ -214,6 +214,7 @@ class _BotRow extends StatelessWidget {
     final c = NgColors.of(context);
     return ListTile(
       key: Key('ng-bot-${bot.name}'),
+      tileColor: unread ? c.successSoft : null,
       onTap: onTap,
       onLongPress: onManage,
       leading: NgAvatar(name: bot.name, bytes: bytes),
@@ -222,32 +223,46 @@ class _BotRow extends StatelessWidget {
           Expanded(
             child: Text(
               bot.title,
-              style: NgType.body.copyWith(color: c.text),
+              style: NgType.body.copyWith(
+                color: c.text,
+                fontWeight: unread ? FontWeight.w700 : null,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
           if (unread)
-            Container(
-              key: Key('ng-bot-unread-${bot.name}'),
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.only(right: 6),
-              decoration: BoxDecoration(
-                color: c.accentText,
-                shape: BoxShape.circle,
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Semantics(
+                label: ngL.ng_unread_finished,
+                child: Container(
+                  key: Key('ng-bot-unread-${bot.name}'),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: c.success,
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
             ),
           if (bot.lastActiveMs > 0)
             Text(
               ngAgo(DateTime.fromMillisecondsSinceEpoch(bot.lastActiveMs)),
-              style: NgType.caption.copyWith(color: c.text3),
+              style: NgType.caption.copyWith(
+                color: unread ? c.text2 : c.text3,
+                fontWeight: unread ? FontWeight.w600 : null,
+              ),
             ),
         ],
       ),
       subtitle: Text(
         bot.preview.isEmpty ? bot.description : bot.preview,
-        style: NgType.caption.copyWith(color: c.text3),
+        style: NgType.caption.copyWith(
+          color: unread ? c.text2 : c.text3,
+          fontWeight: unread ? FontWeight.w600 : null,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

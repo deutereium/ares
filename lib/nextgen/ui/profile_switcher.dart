@@ -1,6 +1,9 @@
 // NextGen entry point for switching the Hermes profile on the current gateway.
 // The gateway keeps one connection; only the profile selected per REST/WS
 // request changes, so the switch is a metadata edit plus a gateway rebuild.
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../core/services/profile_switch_service.dart';
@@ -23,12 +26,38 @@ final Map<String, _CachedProfiles> _profileCache = {};
 String _profileCacheKey(NgScope scope) =>
     '${scope.connection.id}|${scope.gateway.url.display}';
 
+/// Persisted copy of the last profile list, so a cold start can aggregate
+/// across profiles before the first network round trip completes.
+String _profilePrefsKey(NgScope scope) =>
+    'nextgen_profiles_cache.${scope.connection.id}.${scope.gateway.url.display}';
+
 /// The last profile list read for [scope], including a stale entry. Chat lists
 /// use this to decide whether they can aggregate across profiles without
 /// spending a round trip every refresh.
 List<String>? cachedNgProfiles(NgScope scope) {
-  final hit = _profileCache[_profileCacheKey(scope)];
-  return hit?.profiles;
+  final key = _profileCacheKey(scope);
+  final hit = _profileCache[key];
+  if (hit != null && hit.profiles.isNotEmpty) return hit.profiles;
+  // A previous launch may have discovered the profiles before this one
+  // connected. Use that list immediately and let [ngProfiles] refresh it.
+  final raw = scope.prefs.getString(_profilePrefsKey(scope));
+  if (raw == null || raw.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return null;
+    final profiles = decoded
+        .whereType<String>()
+        .where((p) => p.trim().isNotEmpty)
+        .toList(growable: false);
+    if (profiles.isEmpty) return null;
+    _profileCache[key] = _CachedProfiles(
+      profiles,
+      DateTime.fromMillisecondsSinceEpoch(0),
+    );
+    return profiles;
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Profile label used on chat rows. The server's own store is called
@@ -44,11 +73,19 @@ Future<List<String>> ngProfiles(NgScope scope) async {
   final key = _profileCacheKey(scope);
   final hit = _profileCache[key];
   if (hit != null &&
+      hit.profiles.isNotEmpty &&
       DateTime.now().difference(hit.fetchedAt) < _profileCacheTtl) {
     return hit.profiles;
   }
   final profiles = await scope.gateway.api.listProfiles();
-  _profileCache[key] = _CachedProfiles(profiles, DateTime.now());
+  // An empty answer is not a profile list: never cache it, or the sidebar
+  // stays single-profile until the TTL expires.
+  if (profiles.isNotEmpty) {
+    _profileCache[key] = _CachedProfiles(profiles, DateTime.now());
+    unawaited(
+      scope.prefs.setString(_profilePrefsKey(scope), jsonEncode(profiles)),
+    );
+  }
   return profiles;
 }
 

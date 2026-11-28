@@ -113,6 +113,19 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Visible (resumed or just paused behind the notification shade): the
+        // user can already see activity, so the push bridge stays quiet.
+        AppVisibility.foreground = true
+    }
+
+    override fun onStop() {
+        // Fully hidden or another app is in front: pushes may notify again.
+        AppVisibility.foreground = false
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         WindowViewport.refresh(window.decorView)

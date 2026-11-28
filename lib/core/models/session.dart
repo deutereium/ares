@@ -249,6 +249,27 @@ class Session {
     lastReadAt: lastReadAt,
   );
 
+  /// The fields the sidebar needs to show a cached list before the gateway
+  /// answers. [Session.fromJson] reads this shape back.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'title': title,
+    'model': model,
+    'source': source,
+    'message_count': messageCount,
+    'preview': preview,
+    'started_at': startedAt,
+    'ended_at': endedAt,
+    'last_active': lastActive,
+    'is_active': isActive,
+    'pinned': pinned,
+    'archived': archived,
+    '_lineage_root_id': lineageRootId,
+    'profile': profile,
+    'unread': unread,
+    'last_read_at': lastReadAt,
+  };
+
   /// Parses one session row.
   ///
   /// Set [ignoreIsActive] when the payload's `is_active` is a fixed

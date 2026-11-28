@@ -118,9 +118,66 @@ class NgGroupChat {
 }
 
 class NgBotsModel extends ChangeNotifier {
-  NgBotsModel(this.scope);
+  NgBotsModel(this.scope) {
+    _restoreCache();
+  }
 
   NgScope scope;
+
+  static String _cacheKey(NgScope scope) =>
+      'nextgen_bots_cache.${scope.connection.id}.'
+      '${scope.connection.gatewayProfile ?? ''}.'
+      '${scope.gateway.url.display}';
+
+  static const _cacheVersion = 1;
+
+  /// Rebuild the roster from the last raw `profiles.list`/`groups.list` rows
+  /// so Bots has content on the first frame instead of waiting for the socket.
+  void _restoreCache() {
+    try {
+      final raw = scope.prefs.getString(_cacheKey(scope));
+      if (raw == null || raw.isEmpty) return;
+      final data = jsonDecode(raw);
+      if (data is! Map) return;
+      final rows = (data['profiles'] as List?)
+          ?.whereType<Map>()
+          .map(_map)
+          .toList(growable: false);
+      if (rows == null || rows.isEmpty) return;
+      _bots = [for (final row in rows) _botFrom(row)]
+        ..sort((a, b) => b.lastActiveMs.compareTo(a.lastActiveMs));
+      final rooms = (data['rooms'] as List?)
+          ?.whereType<Map>()
+          .map(_map)
+          .toList(growable: false);
+      _groups = [
+        ..._groupsFromProfiles(rows),
+        if (rooms != null)
+          ...rooms
+              .where((r) => r['disbanded_at'] == null)
+              .map(_remoteGroup)
+              .whereType<NgGroupChat>(),
+      ]..sort((a, b) => b.lastActiveMs.compareTo(a.lastActiveMs));
+    } catch (_) {
+      // A corrupt cache is only a missing cache; the network refresh wins.
+    }
+  }
+
+  void _saveCache(
+    List<Map<String, dynamic>> rows,
+    List<Map<String, dynamic>> rooms,
+  ) {
+    try {
+      final data = <String, dynamic>{
+        'v': _cacheVersion,
+        'profiles': rows,
+        'rooms': rooms,
+      };
+      unawaited(scope.prefs.setString(_cacheKey(scope), jsonEncode(data)));
+    } catch (_) {
+      // Persisting is best effort; the gateway list is authoritative.
+    }
+  }
 
   List<NgBot> _bots = const [];
   List<NgGroupChat> _groups = const [];
@@ -224,6 +281,7 @@ class NgBotsModel extends ChangeNotifier {
     _activeBot = null;
     _error = null;
     scope = next;
+    _restoreCache();
     notifyListeners();
   }
 
@@ -268,13 +326,16 @@ class NgBotsModel extends ChangeNotifier {
         for (final row in rows) _botFrom(row),
       ]..sort((a, b) => b.lastActiveMs.compareTo(a.lastActiveMs));
       _groups = _groupsFromProfiles(rows);
+      var roomRows = <Map<String, dynamic>>[];
       try {
         final rooms = await scope.gateway.call('groups.list', {
           'limit': 100,
         });
-        final remote = (rooms['rooms'] as List? ?? const [])
+        roomRows = (rooms['rooms'] as List? ?? const [])
             .whereType<Map>()
             .map((r) => _map(r))
+            .toList(growable: false);
+        final remote = roomRows
             .where((r) => r['disbanded_at'] == null)
             .map(_remoteGroup)
             .whereType<NgGroupChat>();
@@ -283,6 +344,7 @@ class NgBotsModel extends ChangeNotifier {
       } catch (_) {
         // Older gateways have no hosted rooms; the mirrored rooms still work.
       }
+      _saveCache(rows, roomRows);
       _trackUnread();
       for (final bot in _bots) {
         if (!bot.hasAvatar) {

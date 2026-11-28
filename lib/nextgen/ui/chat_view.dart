@@ -2,6 +2,7 @@
 // thinking and tool rows), status line, inline approval/question panel and the
 // pill composer (model chip, dictation, send/stop, steer or queue while busy).
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -1843,12 +1844,16 @@ class _AssistantBlockState extends State<_AssistantBlock> {
   }) {
     final tool = part.tool!;
     final busy = tool.running;
+    final identity = _toolIdentity(tool.name);
+    final subtitle = _toolSubtitle(tool);
     return _Disclosure(
-      icon: Icons.build_outlined,
+      icon: identity.icon,
       animate: animate,
       label: busy
-          ? '${tool.name}${tool.detail == null ? '' : ' · ${tool.detail}'}'
-          : ngL.ng_used(tool.name),
+          ? (subtitle == null || subtitle.isEmpty
+                ? identity.label
+                : '${identity.label} · $subtitle')
+          : ngL.ng_used(identity.label),
       busy: busy,
       open: _openTools.contains(index),
       onTap: () => setState(() => _toggle(_openTools, index)),
@@ -2267,9 +2272,13 @@ class _ToolRowState extends State<_ToolRow> {
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
     final t = widget.tool;
-    final detail = t.summary ?? t.detail;
+    final identity = _toolIdentity(t.name);
+    final subtitle = _toolSubtitle(t);
+    final args = _toolArgs(t.input);
     final hasBody =
-        (t.input?.isNotEmpty ?? false) || (t.output?.isNotEmpty ?? false);
+        (args?.isNotEmpty ?? false) ||
+        (t.input?.isNotEmpty ?? false) ||
+        (t.output?.isNotEmpty ?? false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2280,30 +2289,30 @@ class _ToolRowState extends State<_ToolRow> {
             child: Row(
               children: [
                 Icon(
-                  t.running
-                      ? Icons.more_horiz
-                      : t.failed
-                      ? Icons.error_outline
-                      : Icons.check,
-                  size: 15,
-                  color: t.failed ? c.danger : c.text3,
+                  identity.icon,
+                  size: 16,
+                  color: t.failed
+                      ? c.danger
+                      : t.running
+                      ? c.accent
+                      : c.text3,
                 ),
                 const SizedBox(width: 8),
                 Flexible(
                   flex: 2,
                   child: Text(
-                    t.name,
+                    identity.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: NgType.label.copyWith(color: c.text2),
                   ),
                 ),
-                if (detail != null && detail.isNotEmpty) ...[
+                if (subtitle != null && subtitle.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   Expanded(
                     flex: 3,
                     child: Text(
-                      detail,
+                      subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: NgType.caption.copyWith(color: c.text3),
@@ -2311,6 +2320,24 @@ class _ToolRowState extends State<_ToolRow> {
                   ),
                 ] else
                   const Spacer(),
+                if (t.running)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.6),
+                    ),
+                  ),
+                if (t.failed)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.error_outline,
+                      size: 14,
+                      color: c.danger,
+                    ),
+                  ),
                 if (t.startedAt != null)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
@@ -2343,12 +2370,69 @@ class _ToolRowState extends State<_ToolRow> {
           ),
         ),
         if (_open) ...[
-          if (t.input?.isNotEmpty ?? false) _codeBlock(c, t.input!),
-          if (t.output?.isNotEmpty ?? false) _codeBlock(c, t.output!),
+          if (args != null && args.isNotEmpty) ...[
+            _sectionLabel(c, 'Input'),
+            _keyValueBlock(c, args),
+          ] else if (t.input?.isNotEmpty ?? false) ...[
+            _sectionLabel(c, 'Input'),
+            _codeBlock(c, _prettyJson(t.input!)),
+          ],
+          if (t.output?.isNotEmpty ?? false) ...[
+            _sectionLabel(c, 'Result'),
+            _codeBlock(c, _prettyJson(t.output!)),
+          ],
         ],
       ],
     );
   }
+
+  Widget _sectionLabel(NgColors c, String text) => Padding(
+    padding: const EdgeInsets.only(top: 2, bottom: 4),
+    child: Text(
+      text.toUpperCase(),
+      style: NgType.caption.copyWith(
+        color: c.textMuted,
+        letterSpacing: 0.6,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+
+  Widget _keyValueBlock(NgColors c, Map<String, dynamic> args) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: c.well,
+      borderRadius: BorderRadius.circular(NgRadii.sm),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final entry in args.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _toolHumanize(entry.key),
+                  style: NgType.caption.copyWith(color: c.textMuted),
+                ),
+                const SizedBox(height: 2),
+                SelectableText(
+                  _clipToolText(_toolValueText(entry.value)),
+                  style: NgType.code.copyWith(
+                    color: c.text2,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
 
   Widget _codeBlock(NgColors c, String text) => Container(
     width: double.infinity,
@@ -2359,10 +2443,121 @@ class _ToolRowState extends State<_ToolRow> {
       borderRadius: BorderRadius.circular(NgRadii.sm),
     ),
     child: SelectableText(
-      text.length > 4000 ? '${text.substring(0, 4000)}…' : text,
+      _clipToolText(text),
       style: NgType.code.copyWith(color: c.text2, fontSize: 11.5),
     ),
   );
+}
+
+String _clipToolText(String text) =>
+    text.length > 4000 ? '${text.substring(0, 4000)}…' : text;
+
+String _toolHumanize(String name) {
+  final words = name
+      .replaceAll(RegExp(r'[^A-Za-z0-9]+'), ' ')
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  if (words.isEmpty) return name;
+  return words
+      .map(
+        (word) => word.length == 1
+            ? word.toUpperCase()
+            : '${word.substring(0, 1).toUpperCase()}${word.substring(1)}',
+      )
+      .join(' ');
+}
+
+({IconData icon, String label}) _toolIdentity(String name) {
+  final n = name.toLowerCase();
+  if (n.contains('patch') || n.contains('diff')) {
+    return (icon: Icons.edit_note, label: 'Patch');
+  }
+  if (n.contains('terminal') ||
+      n.contains('shell') ||
+      n.contains('bash') ||
+      n.contains('exec') ||
+      n.contains('command')) {
+    return (icon: Icons.terminal, label: 'Terminal');
+  }
+  if (n.contains('skill')) {
+    return (icon: Icons.auto_awesome, label: 'Skill');
+  }
+  if (n.contains('read')) {
+    return (icon: Icons.description_outlined, label: 'Read');
+  }
+  if (n.contains('write') ||
+      n.contains('edit') ||
+      n.contains('replace')) {
+    return (icon: Icons.edit_outlined, label: 'Write');
+  }
+  if (n.contains('search') || n.contains('grep') || n.contains('find')) {
+    return (icon: Icons.search, label: 'Search');
+  }
+  if (n.contains('web') ||
+      n.contains('fetch') ||
+      n.contains('browser') ||
+      n.contains('http')) {
+    return (icon: Icons.language, label: 'Web');
+  }
+  if (n.contains('image') || n.contains('vision')) {
+    return (icon: Icons.image_outlined, label: 'Image');
+  }
+  return (icon: Icons.build_outlined, label: _toolHumanize(name));
+}
+
+Map<String, dynamic>? _toolArgs(String? input) {
+  final text = input?.trim();
+  if (text == null || text.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(text);
+    if (decoded is Map) return decoded.cast<String, dynamic>();
+  } catch (_) {
+    // Plain-text arguments are shown verbatim.
+  }
+  return null;
+}
+
+String? _toolSubtitle(NgTool t) {
+  final args = _toolArgs(t.input);
+  if (args != null) {
+    for (final key in const [
+      'command',
+      'cmd',
+      'path',
+      'file',
+      'filename',
+      'skill',
+      'name',
+      'query',
+      'url',
+    ]) {
+      final value = args[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim().replaceAll(RegExp(r'\s+'), ' ');
+      }
+    }
+  }
+  final detail = (t.summary ?? t.detail)?.trim();
+  if (detail == null || detail.isEmpty) return null;
+  if (detail.startsWith('{') || detail.startsWith('[')) return null;
+  return detail.replaceAll(RegExp(r'\s+'), ' ');
+}
+
+String _prettyJson(String text) {
+  final trimmed = text.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return text;
+  try {
+    return const JsonEncoder.withIndent('  ').convert(jsonDecode(trimmed));
+  } catch (_) {
+    return text;
+  }
+}
+
+String _toolValueText(Object? value) {
+  if (value == null) return 'null';
+  if (value is String) return _prettyJson(value);
+  return const JsonEncoder.withIndent('  ').convert(value);
 }
 
 /// What the agent is waiting on: approval, a question or a secret.
