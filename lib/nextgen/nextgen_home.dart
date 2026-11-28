@@ -201,8 +201,6 @@ class _NextGenHomeState extends State<NextGenHome> {
         connManager: _manager,
         firstRun: true,
         onConnected: (saved) => _reload(select: saved.id),
-        onUseClassic: () =>
-            NextGenPreferences.setEnabled(_manager.prefs, false),
       );
     }
     return NgScope(

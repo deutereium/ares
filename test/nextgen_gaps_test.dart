@@ -44,7 +44,6 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     HermesSignInVault.resetForTesting(MemorySignInSecretStore());
-    nextGenEnabled.value = false;
     nextGenOpenRequest.value = null;
   });
 
@@ -65,11 +64,7 @@ void main() {
   });
 
   group('notification taps', () {
-    test('go to NextGen only while it is on and name a chat', () {
-      expect(routeNotificationToNextGen('c1', 's1'), isFalse);
-      expect(nextGenOpenRequest.value, isNull);
-
-      nextGenEnabled.value = true;
+    test('go to NextGen when the payload names a chat', () {
       expect(routeNotificationToNextGen('c1', null), isFalse);
       expect(routeNotificationToNextGen('', 's1'), isFalse);
       expect(routeNotificationToNextGen('c1', 's1'), isTrue);

@@ -14,7 +14,6 @@ import '../../core/services/connection_manager.dart';
 import '../../core/services/dashboard_api_client.dart';
 import '../../core/services/hermes_sign_in.dart';
 import '../../core/services/lan_discovery_service.dart';
-import '../../core/widgets/setup_interface_choice.dart';
 import '../theme/nextgen_theme.dart';
 import 'certificate_picker.dart';
 import 'widgets.dart';
@@ -28,7 +27,6 @@ class NgConnectScreen extends StatefulWidget {
     this.existing,
     this.firstRun = true,
     this.onCancel,
-    this.onUseClassic,
   });
 
   final ConnectionManager connManager;
@@ -38,9 +36,6 @@ class NgConnectScreen extends StatefulWidget {
   final SavedConnection? existing;
   final bool firstRun;
   final VoidCallback? onCancel;
-
-  /// Leaves NextGen for the classic interface (first run only).
-  final VoidCallback? onUseClassic;
 
   @override
   State<NgConnectScreen> createState() => _NgConnectScreenState();
@@ -450,17 +445,7 @@ class _NgConnectScreenState extends State<NgConnectScreen> {
               : ngL.ng_connect_to_another_hermes_agent_dashboard,
           style: NgType.body.copyWith(color: c.text2),
         ),
-        if (widget.onUseClassic != null) ...[
-          const SizedBox(height: 20),
-          SetupInterfaceChoice(
-            nextGen: true,
-            onSelected: (nextGen) {
-              if (!nextGen) widget.onUseClassic!();
-            },
-          ),
-          const SizedBox(height: 24),
-        ] else
-          const SizedBox(height: 28),
+        const SizedBox(height: 28),
         NgField(
           controller: _address,
           label: ngL.ng_dashboard_address,

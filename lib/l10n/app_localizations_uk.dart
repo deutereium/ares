@@ -4006,13 +4006,6 @@ class AppLocalizationsUk extends AppLocalizations {
       'Відкрийте список сесій, щоб вибрати чат. Чернетку збережено.';
 
   @override
-  String get nextgen_toggle => 'Інтерфейс NextGen';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      'Новий дизайн з єдиним входом, живими чатами та пошуком у мережі. Шлюзи й чати спільні з цим інтерфейсом.';
-
-  @override
   String get nextgen_single_login => 'Увійти з одним логіном';
 
   @override
@@ -5147,14 +5140,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get ng_interface => 'Інтерфейс';
 
   @override
-  String get ng_switch_to_the_classic_interface =>
-      'Перейти до класичного інтерфейсу';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'Вимикає NextGen. Ви можете знову ввімкнути його в налаштуваннях.';
-
-  @override
   String get ng_restored => 'Відновлено';
 
   @override
@@ -5508,10 +5493,6 @@ class AppLocalizationsUk extends AppLocalizations {
       'М’яке акцентне підсвічування за кожним екраном';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      'Новий інтерфейс. Вимкніть, щоб повернутися до класичного; шлюзи й чати спільні.';
-
-  @override
   String get ng_more_settings => 'Інші налаштування';
 
   @override
@@ -5550,10 +5531,6 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'Лише класичний інтерфейс';
-
-  @override
-  String get classic_only_settings_hint =>
-      'Розділи з позначкою «Лише класичний інтерфейс» змінюють класичний вигляд і чат, але не NextGen. У NextGen є власні параметри оформлення в налаштуваннях.';
 
   @override
   String get attachment_preview_too_large =>

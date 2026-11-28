@@ -4013,13 +4013,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Abre la lista de sesiones para elegir un chat. Se conservó tu borrador.';
 
   @override
-  String get nextgen_toggle => 'Interfaz NextGen';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      'Un diseño nuevo con un solo inicio de sesión, chats en directo y búsqueda en la red. Tus gateways y chats se comparten con esta interfaz.';
-
-  @override
   String get nextgen_single_login => 'Conectar con un solo inicio de sesión';
 
   @override
@@ -5157,14 +5150,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ng_interface => 'Interfaz';
 
   @override
-  String get ng_switch_to_the_classic_interface =>
-      'Cambiar a la interfaz clásica';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'Desactiva NextGen. Puedes volver a activarlo en Ajustes.';
-
-  @override
   String get ng_restored => 'Restaurado';
 
   @override
@@ -5518,10 +5503,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Luz de acento tenue detrás de cada pantalla';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      'La nueva interfaz. Desactívala para volver a la clásica; tus pasarelas y chats se comparten.';
-
-  @override
   String get ng_more_settings => 'Más ajustes';
 
   @override
@@ -5561,10 +5542,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'Solo para la interfaz clásica';
-
-  @override
-  String get classic_only_settings_hint =>
-      'Las secciones marcadas como «Solo para la interfaz clásica» cambian el aspecto y el chat clásicos, no NextGen. NextGen tiene sus propias opciones de apariencia en Ajustes.';
 
   @override
   String get attachment_preview_too_large =>

@@ -365,14 +365,6 @@ class _NgSettingsPageState extends State<NgSettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Column(
                 children: [
-                  SwitchListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                    title: const Text('NextGen'),
-                    subtitle: Text(ngL.ng_the_new_interface_turn_off_to),
-                    value: true,
-                    onChanged: (v) =>
-                        NextGenPreferences.setEnabled(scope.prefs, v),
-                  ),
                   _sidebarRowsSetting(c, scope),
                   NgRow(
                     icon: Icons.tune,

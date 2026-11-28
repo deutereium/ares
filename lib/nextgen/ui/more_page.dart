@@ -7,13 +7,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/l10n/l10n.dart';
 import '../../core/models/hermes_project.dart';
-import '../../core/screens/cron_screen.dart';
 import '../../core/screens/memory_screen.dart';
 import '../../core/screens/projects_root_screen.dart';
 import '../../core/screens/skills_screen.dart';
 import '../../core/services/connection_manager.dart';
 import '../../core/services/dashboard_api_client.dart';
-import '../nextgen_preferences.dart';
 import '../theme/nextgen_theme.dart';
 import 'models_page.dart';
 import 'nextgen_scope.dart';
@@ -58,7 +56,7 @@ class _NgMorePageState extends State<NgMorePage> {
       _scopeKey = scopeKey;
     }
     final own = _ownProfile();
-    for (final key in const ['memory', 'skills', 'cron', 'config', 'models']) {
+    for (final key in const ['memory', 'skills', 'config', 'models']) {
       _profiles.putIfAbsent(key, () => own);
     }
   }
@@ -120,9 +118,8 @@ class _NgMorePageState extends State<NgMorePage> {
                 NgRow(
                   icon: Icons.archive_outlined,
                   title: ngL.ng_archived_chats,
-                  onTap: () => push(
-                    NgArchivedPage(onOpenSession: widget.onOpenSession),
-                  ),
+                  onTap: () =>
+                      push(NgArchivedPage(onOpenSession: widget.onOpenSession)),
                 ),
                 NgRow(
                   icon: Icons.folder_outlined,
@@ -155,7 +152,9 @@ class _NgMorePageState extends State<NgMorePage> {
                   subtitle: ngL.ng_what_hermes_remembers_about_you,
                   trailing: selector('memory'),
                   onTap: () => push(
-                    MemoryScreen(connection: _connectionFor(_profileOf('memory'))),
+                    MemoryScreen(
+                      connection: _connectionFor(_profileOf('memory')),
+                    ),
                   ),
                 ),
                 NgRow(
@@ -164,16 +163,9 @@ class _NgMorePageState extends State<NgMorePage> {
                   subtitle: ngL.ng_browse_and_read_installed_skills,
                   trailing: selector('skills'),
                   onTap: () => push(
-                    SkillsScreen(connection: _connectionFor(_profileOf('skills'))),
-                  ),
-                ),
-                NgRow(
-                  icon: Icons.event_repeat,
-                  title: ngL.ng_cron_editor,
-                  subtitle: ngL.ng_edit_schedules_prompts_and_delivery,
-                  trailing: selector('cron'),
-                  onTap: () => push(
-                    CronScreen(connection: _connectionFor(_profileOf('cron'))),
+                    SkillsScreen(
+                      connection: _connectionFor(_profileOf('skills')),
+                    ),
                   ),
                 ),
                 NgRow(
@@ -200,16 +192,6 @@ class _NgMorePageState extends State<NgMorePage> {
                   },
                 ),
               ],
-            ),
-          ),
-          NgSectionLabel(ngL.ng_interface),
-          NgCard(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: NgRow(
-              icon: Icons.history_toggle_off,
-              title: ngL.ng_switch_to_the_classic_interface,
-              subtitle: ngL.ng_turns_nextgen_off_you_can_turn,
-              onTap: () => NextGenPreferences.setEnabled(scope.prefs, false),
             ),
           ),
         ],

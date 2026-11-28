@@ -4021,13 +4021,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ouvrez la liste des sessions pour choisir une conversation. Votre brouillon a été conservé.';
 
   @override
-  String get nextgen_toggle => 'Interface NextGen';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      'Un nouveau design avec une seule connexion, des discussions en direct et la découverte réseau. Vos passerelles et discussions sont partagées avec cette interface.';
-
-  @override
   String get nextgen_single_login => 'Se connecter avec un seul identifiant';
 
   @override
@@ -5167,14 +5160,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ng_interface => 'Interface';
 
   @override
-  String get ng_switch_to_the_classic_interface =>
-      'Passer à l’interface classique';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'Désactive NextGen. Vous pourrez le réactiver dans les paramètres.';
-
-  @override
   String get ng_restored => 'Restauré';
 
   @override
@@ -5529,10 +5514,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Une douce lueur d’accentuation derrière chaque écran';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      'La nouvelle interface. Désactivez-la pour revenir à l’interface classique ; vos passerelles et vos discussions sont partagées.';
-
-  @override
   String get ng_more_settings => 'Plus de paramètres';
 
   @override
@@ -5572,10 +5553,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'Interface classique uniquement';
-
-  @override
-  String get classic_only_settings_hint =>
-      'Les sections marquées « Interface classique uniquement » modifient uniquement l’apparence et les discussions de l’interface classique, pas celles de NextGen. NextGen dispose de ses propres options d’apparence dans ses paramètres.';
 
   @override
   String get attachment_preview_too_large =>

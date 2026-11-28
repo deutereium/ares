@@ -6714,18 +6714,6 @@ abstract class AppLocalizations {
   /// **'Open the session list to choose a chat. Your draft was kept.'**
   String get slash_sessions_inline;
 
-  /// No description provided for @nextgen_toggle.
-  ///
-  /// In en, this message translates to:
-  /// **'NextGen interface'**
-  String get nextgen_toggle;
-
-  /// No description provided for @nextgen_toggle_subtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'A new design with one sign-in, live chats and network discovery. Your gateways and chats are shared with this interface.'**
-  String get nextgen_toggle_subtitle;
-
   /// No description provided for @nextgen_single_login.
   ///
   /// In en, this message translates to:
@@ -8628,18 +8616,6 @@ abstract class AppLocalizations {
   /// **'Interface'**
   String get ng_interface;
 
-  /// No description provided for @ng_switch_to_the_classic_interface.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch to the classic interface'**
-  String get ng_switch_to_the_classic_interface;
-
-  /// No description provided for @ng_turns_nextgen_off_you_can_turn.
-  ///
-  /// In en, this message translates to:
-  /// **'Turns NextGen off. You can turn it back on in Settings.'**
-  String get ng_turns_nextgen_off_you_can_turn;
-
   /// No description provided for @ng_restored.
   ///
   /// In en, this message translates to:
@@ -9282,12 +9258,6 @@ abstract class AppLocalizations {
   /// **'Soft accent light behind each screen'**
   String get ng_soft_accent_light_behind_each_screen;
 
-  /// No description provided for @ng_the_new_interface_turn_off_to.
-  ///
-  /// In en, this message translates to:
-  /// **'The new interface. Turn off to go back to the classic one; your gateways and chats are shared.'**
-  String get ng_the_new_interface_turn_off_to;
-
   /// No description provided for @ng_more_settings.
   ///
   /// In en, this message translates to:
@@ -9359,12 +9329,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Classic interface only'**
   String get classic_interface_only;
-
-  /// No description provided for @classic_only_settings_hint.
-  ///
-  /// In en, this message translates to:
-  /// **'Sections marked Classic interface only change the classic look and chat, not NextGen. NextGen has its own appearance options in its Settings.'**
-  String get classic_only_settings_hint;
 
   /// No description provided for @attachment_preview_too_large.
   ///

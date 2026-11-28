@@ -1,14 +1,9 @@
 // Device preferences for the NextGen interface.
 //
-// NextGen and the classic interface share every saved connection, chat and
-// sign-in. Only how the app looks and which connection NextGen opens on launch
-// are kept here.
+// The app has one interface: NextGen. Only how it looks and which connection
+// it opens on launch are kept here.
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Whether the app runs the NextGen interface. Toggled from Settings in either
-/// interface; the root rebuilds when it changes.
-final ValueNotifier<bool> nextGenEnabled = ValueNotifier(false);
 
 /// A chat a notification tap asked NextGen to open.
 typedef NgOpenRequest = ({String connectionId, String sessionId});
@@ -17,10 +12,9 @@ typedef NgOpenRequest = ({String connectionId, String sessionId});
 /// NextGen switches to the connection, opens the chat and clears it.
 final ValueNotifier<NgOpenRequest?> nextGenOpenRequest = ValueNotifier(null);
 
-/// Routes a notification tap to NextGen. Returns false when NextGen is off
-/// or the payload names no chat, so the classic routing handles it.
+/// Routes a notification tap to NextGen. Returns false when the payload names
+/// no chat.
 bool routeNotificationToNextGen(String? connectionId, String? sessionId) {
-  if (!nextGenEnabled.value) return false;
   if (connectionId == null || connectionId.isEmpty) return false;
   if (sessionId == null || sessionId.isEmpty) return false;
   nextGenOpenRequest.value = (connectionId: connectionId, sessionId: sessionId);
@@ -40,14 +34,13 @@ typedef NgNotificationAnswer = ({
 final ValueNotifier<NgNotificationAnswer?> nextGenNotificationAnswer =
     ValueNotifier(null);
 
-/// Routes an approval button to NextGen; false when NextGen is off.
+/// Routes an approval button to NextGen.
 bool routeNotificationAnswerToNextGen({
   required String? connectionId,
   required String? sessionId,
   required String? requestId,
   required String? choice,
 }) {
-  if (!nextGenEnabled.value) return false;
   if (connectionId == null || connectionId.isEmpty) return false;
   if (requestId == null || requestId.isEmpty || choice == null) return false;
   nextGenNotificationAnswer.value = (
@@ -86,7 +79,6 @@ class NextGenLook extends ChangeNotifier {
 }
 
 abstract final class NextGenPreferences {
-  static const enabledKey = 'nextgen_enabled';
   static const currentConnectionKey = 'nextgen_current_connection';
   static const themeModeKey = 'nextgen_theme_mode';
   static const accentKey = 'nextgen_accent';
@@ -121,7 +113,6 @@ abstract final class NextGenPreferences {
   /// Reads every NextGen preference into memory. Synchronous: the shared
   /// [SharedPreferences] instance is already loaded at startup.
   static void load(SharedPreferences prefs) {
-    nextGenEnabled.value = prefs.getBool(enabledKey) ?? false;
     sidebarRowsNotifier.value = sidebarRows(prefs);
     final look = NextGenLook.instance;
     look.themeMode = switch (prefs.getString(themeModeKey)) {
@@ -135,11 +126,6 @@ abstract final class NextGenPreferences {
     );
     look.pureBlack = prefs.getBool(pureBlackKey) ?? false;
     look.glow = prefs.getBool(glowKey) ?? true;
-  }
-
-  static Future<void> setEnabled(SharedPreferences prefs, bool enabled) async {
-    nextGenEnabled.value = enabled;
-    await prefs.setBool(enabledKey, enabled);
   }
 
   static String? currentConnectionId(SharedPreferences prefs) =>

@@ -389,22 +389,8 @@ void main() {
     expect(sink.cancelled, contains(id));
   });
 
-  test('approval buttons route to NextGen only while it runs', () {
-    nextGenEnabled.value = false;
-    expect(
-      routeNotificationAnswerToNextGen(
-        connectionId: 'c1',
-        sessionId: 's1',
-        requestId: 'r1',
-        choice: 'once',
-      ),
-      isFalse,
-    );
-    nextGenEnabled.value = true;
-    addTearDown(() {
-      nextGenEnabled.value = false;
-      nextGenNotificationAnswer.value = null;
-    });
+  test('approval buttons route to NextGen', () {
+    addTearDown(() => nextGenNotificationAnswer.value = null);
     expect(
       routeNotificationAnswerToNextGen(
         connectionId: 'c1',

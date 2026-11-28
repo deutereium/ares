@@ -3903,13 +3903,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slash_sessions_inline => '세션 목록을 열어 채팅을 선택하세요. 초안은 보관되었습니다.';
 
   @override
-  String get nextgen_toggle => 'NextGen 인터페이스';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      '한 번의 로그인, 실시간 채팅, 네트워크 검색을 갖춘 새로운 디자인입니다. 게이트웨이와 채팅은 이 인터페이스와 공유됩니다.';
-
-  @override
   String get nextgen_single_login => '하나의 로그인으로 연결';
 
   @override
@@ -5003,13 +4996,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ng_interface => '인터페이스';
 
   @override
-  String get ng_switch_to_the_classic_interface => '클래식 인터페이스로 전환';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'NextGen을 끕니다. 설정에서 다시 켤 수 있어요.';
-
-  @override
   String get ng_restored => '복원됨';
 
   @override
@@ -5357,10 +5343,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '화면 뒤에 은은한 강조색 조명을 표시합니다.';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      '새 인터페이스입니다. 끄면 클래식 인터페이스로 돌아갑니다. 게이트웨이와 채팅은 두 인터페이스에서 공유됩니다.';
-
-  @override
   String get ng_more_settings => '추가 설정';
 
   @override
@@ -5399,10 +5381,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get classic_interface_only => '클래식 인터페이스 전용';
-
-  @override
-  String get classic_only_settings_hint =>
-      '클래식 인터페이스 전용으로 표시된 섹션은 클래식 화면과 채팅만 변경하며 NextGen에는 적용되지 않습니다. NextGen에는 설정에 별도의 화면 옵션이 있습니다.';
 
   @override
   String get attachment_preview_too_large =>

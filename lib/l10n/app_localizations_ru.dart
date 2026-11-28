@@ -4013,13 +4013,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Откройте список сессий, чтобы выбрать чат. Черновик сохранён.';
 
   @override
-  String get nextgen_toggle => 'Интерфейс NextGen';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      'Новый дизайн с единым входом, живыми чатами и поиском в сети. Шлюзы и чаты общие с этим интерфейсом.';
-
-  @override
   String get nextgen_single_login => 'Войти с одним логином';
 
   @override
@@ -5152,14 +5145,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ng_interface => 'Интерфейс';
 
   @override
-  String get ng_switch_to_the_classic_interface =>
-      'Переключиться на классический интерфейс';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'Отключает NextGen. Снова включить его можно в настройках.';
-
-  @override
   String get ng_restored => 'Восстановлено';
 
   @override
@@ -5513,10 +5498,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Мягкое акцентное свечение за каждым экраном';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      'Новый интерфейс. Отключите его, чтобы вернуться к классическому. Шлюзы и чаты общие.';
-
-  @override
   String get ng_more_settings => 'Дополнительные настройки';
 
   @override
@@ -5555,10 +5536,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'Только классический интерфейс';
-
-  @override
-  String get classic_only_settings_hint =>
-      'Разделы с пометкой «Только классический интерфейс» изменяют классический внешний вид и чат, но не NextGen. В NextGen есть собственные настройки внешнего вида.';
 
   @override
   String get attachment_preview_too_large =>

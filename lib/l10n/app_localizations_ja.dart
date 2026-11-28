@@ -3902,13 +3902,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get slash_sessions_inline => 'セッションリストを開いてチャットを選択してください。下書きは保持されています。';
 
   @override
-  String get nextgen_toggle => 'NextGen インターフェース';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      '1回のサインイン、ライブチャット、ネットワーク検出を備えた新しいデザイン。ゲートウェイとチャットはこのインターフェースと共有されます。';
-
-  @override
   String get nextgen_single_login => '1つのログインでサインイン';
 
   @override
@@ -5004,13 +4997,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ng_interface => 'インターフェース';
 
   @override
-  String get ng_switch_to_the_classic_interface => 'クラシックなインターフェースに切り替え';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'NextGenをオフにします。設定から再びオンにできます。';
-
-  @override
   String get ng_restored => '復元しました';
 
   @override
@@ -5357,10 +5343,6 @@ class AppLocalizationsJa extends AppLocalizations {
       '各画面の背後にアクセントカラーの柔らかな光を表示します';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      '新しいインターフェースです。オフにするとクラシック版に戻ります。ゲートウェイとチャットは両方で共有されます。';
-
-  @override
   String get ng_more_settings => 'その他の設定';
 
   @override
@@ -5399,10 +5381,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'クラシック インターフェースのみ';
-
-  @override
-  String get classic_only_settings_hint =>
-      '「クラシック インターフェースのみ」と表示されたセクションの設定は、クラシック版の外観とチャットにのみ適用され、NextGen には適用されません。NextGen には、設定内に独自の外観オプションがあります。';
 
   @override
   String get attachment_preview_too_large =>

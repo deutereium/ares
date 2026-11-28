@@ -3843,12 +3843,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get slash_sessions_inline => '请打开会话列表选择聊天。草稿已保留。';
 
   @override
-  String get nextgen_toggle => 'NextGen 界面';
-
-  @override
-  String get nextgen_toggle_subtitle => '全新设计：一次登录、实时聊天和网络发现。你的网关和聊天与此界面共享。';
-
-  @override
   String get nextgen_single_login => '使用单一登录';
 
   @override
@@ -4930,12 +4924,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ng_interface => '界面';
 
   @override
-  String get ng_switch_to_the_classic_interface => '切换到经典界面';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn => '关闭 NextGen。你可以在设置中重新开启。';
-
-  @override
   String get ng_restored => '已恢复';
 
   @override
@@ -5279,9 +5267,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ng_soft_accent_light_behind_each_screen => '每个页面背后的柔和强调色光效';
 
   @override
-  String get ng_the_new_interface_turn_off_to => '新版界面。关闭后可切回经典界面；网关和聊天记录会共用。';
-
-  @override
   String get ng_more_settings => '更多设置';
 
   @override
@@ -5320,10 +5305,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get classic_interface_only => '仅限经典界面';
-
-  @override
-  String get classic_only_settings_hint =>
-      '标记为“仅限经典界面”的部分只会更改经典版的外观和聊天，不会影响 NextGen。NextGen 在其设置中有自己的外观选项。';
 
   @override
   String get attachment_preview_too_large =>
@@ -9646,12 +9627,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get slash_sessions_inline => '请打开会话列表选择聊天。草稿已保留。';
 
   @override
-  String get nextgen_toggle => 'NextGen 界面';
-
-  @override
-  String get nextgen_toggle_subtitle => '全新设计：一次登录、实时聊天和网络发现。你的网关和聊天与此界面共享。';
-
-  @override
   String get nextgen_single_login => '使用单一登录';
 
   @override
@@ -10733,12 +10708,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ng_interface => '界面';
 
   @override
-  String get ng_switch_to_the_classic_interface => '切换到经典界面';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn => '关闭 NextGen。你可以在设置中重新开启。';
-
-  @override
   String get ng_restored => '已恢复';
 
   @override
@@ -11082,9 +11051,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get ng_soft_accent_light_behind_each_screen => '每个页面背后的柔和强调色光效';
 
   @override
-  String get ng_the_new_interface_turn_off_to => '新版界面。关闭后可切回经典界面；网关和聊天记录会共用。';
-
-  @override
   String get ng_more_settings => '更多设置';
 
   @override
@@ -11123,10 +11089,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get classic_interface_only => '仅限经典界面';
-
-  @override
-  String get classic_only_settings_hint =>
-      '标记为“仅限经典界面”的部分只会更改经典界面的外观和聊天设置，不会影响 NextGen。NextGen 在其“设置”中有自己的外观选项。';
 
   @override
   String get attachment_preview_too_large =>

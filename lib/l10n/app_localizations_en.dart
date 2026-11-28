@@ -3984,13 +3984,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Open the session list to choose a chat. Your draft was kept.';
 
   @override
-  String get nextgen_toggle => 'NextGen interface';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      'A new design with one sign-in, live chats and network discovery. Your gateways and chats are shared with this interface.';
-
-  @override
   String get nextgen_single_login => 'Sign in with one login';
 
   @override
@@ -5118,14 +5111,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ng_interface => 'Interface';
 
   @override
-  String get ng_switch_to_the_classic_interface =>
-      'Switch to the classic interface';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'Turns NextGen off. You can turn it back on in Settings.';
-
-  @override
   String get ng_restored => 'Restored';
 
   @override
@@ -5476,10 +5461,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Soft accent light behind each screen';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      'The new interface. Turn off to go back to the classic one; your gateways and chats are shared.';
-
-  @override
   String get ng_more_settings => 'More settings';
 
   @override
@@ -5518,10 +5499,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'Classic interface only';
-
-  @override
-  String get classic_only_settings_hint =>
-      'Sections marked Classic interface only change the classic look and chat, not NextGen. NextGen has its own appearance options in its Settings.';
 
   @override
   String get attachment_preview_too_large =>

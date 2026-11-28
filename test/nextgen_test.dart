@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hermes_android/core/services/connection_manager.dart';
@@ -36,7 +34,8 @@ class _FakeCallGateway extends NextGenGateway {
   final Future<Map<String, dynamic>> Function(
     String method,
     Map<String, dynamic> params,
-  ) onCall;
+  )
+  onCall;
 
   @override
   Future<Map<String, dynamic>> call(
@@ -278,86 +277,89 @@ void main() {
       expect(chat.error, 'Provider down');
     });
 
-    test('send includes submission_id and retries without it on legacy gateway', () async {
-      final calls = <Map<String, dynamic>>[];
-      final legacyGateway = _FakeCallGateway((method, params) async {
-        calls.add({'method': method, ...params});
-        if (method == 'prompt.submit' && params.containsKey('submission_id')) {
-          throw JsonRpcError(
-            'prompt.submit',
-            'Invalid params: submission_id: Extra inputs are not permitted',
-            code: 4000,
-          );
-        }
-        return {'ok': true};
-      });
-      final localChat = NgChatController(legacyGateway, sessionId: 'stored');
-      localChat.runtimeId = 'rt';
-      addTearDown(() {
-        localChat.dispose();
-        legacyGateway.dispose();
-      });
+    test(
+      'send includes submission_id and retries without it on legacy gateway',
+      () async {
+        final calls = <Map<String, dynamic>>[];
+        final legacyGateway = _FakeCallGateway((method, params) async {
+          calls.add({'method': method, ...params});
+          if (method == 'prompt.submit' &&
+              params.containsKey('submission_id')) {
+            throw JsonRpcError(
+              'prompt.submit',
+              'Invalid params: submission_id: Extra inputs are not permitted',
+              code: 4000,
+            );
+          }
+          return {'ok': true};
+        });
+        final localChat = NgChatController(legacyGateway, sessionId: 'stored');
+        localChat.runtimeId = 'rt';
+        addTearDown(() {
+          localChat.dispose();
+          legacyGateway.dispose();
+        });
 
-      final accepted = await localChat.send('hello');
-      expect(accepted, isTrue);
-      expect(calls, hasLength(2));
-      expect(calls[0]['method'], 'prompt.submit');
-      expect(calls[0]['submission_id'], isA<String>());
-      expect((calls[0]['submission_id'] as String).isNotEmpty, isTrue);
-      expect(calls[1]['method'], 'prompt.submit');
-      expect(calls[1].containsKey('submission_id'), isFalse);
-      expect(calls[1]['text'], 'hello');
-      expect(calls[1]['session_id'], 'rt');
-    });
+        final accepted = await localChat.send('hello');
+        expect(accepted, isTrue);
+        expect(calls, hasLength(2));
+        expect(calls[0]['method'], 'prompt.submit');
+        expect(calls[0]['submission_id'], isA<String>());
+        expect((calls[0]['submission_id'] as String).isNotEmpty, isTrue);
+        expect(calls[1]['method'], 'prompt.submit');
+        expect(calls[1].containsKey('submission_id'), isFalse);
+        expect(calls[1]['text'], 'hello');
+        expect(calls[1]['session_id'], 'rt');
+      },
+    );
 
-    test('send does not retry on unrelated 4000 error and retryLast reuses submission_id', () async {
-      var shouldFail = true;
-      final calls = <Map<String, dynamic>>[];
-      final errGateway = _FakeCallGateway((method, params) async {
-        calls.add({'method': method, ...params});
-        if (method == 'prompt.submit' && shouldFail) {
-          throw JsonRpcError('prompt.submit', 'Session busy', code: 4000);
-        }
-        return {'ok': true};
-      });
-      final localChat = NgChatController(errGateway, sessionId: 'stored');
-      localChat.runtimeId = 'rt';
-      addTearDown(() {
-        localChat.dispose();
-        errGateway.dispose();
-      });
+    test(
+      'send does not retry on unrelated 4000 error and retryLast reuses submission_id',
+      () async {
+        var shouldFail = true;
+        final calls = <Map<String, dynamic>>[];
+        final errGateway = _FakeCallGateway((method, params) async {
+          calls.add({'method': method, ...params});
+          if (method == 'prompt.submit' && shouldFail) {
+            throw JsonRpcError('prompt.submit', 'Session busy', code: 4000);
+          }
+          return {'ok': true};
+        });
+        final localChat = NgChatController(errGateway, sessionId: 'stored');
+        localChat.runtimeId = 'rt';
+        addTearDown(() {
+          localChat.dispose();
+          errGateway.dispose();
+        });
 
-      final first = await localChat.send('hello');
-      expect(first, isFalse);
-      expect(calls, hasLength(1));
-      final firstSubId = calls.single['submission_id'] as String;
+        final first = await localChat.send('hello');
+        expect(first, isFalse);
+        expect(calls, hasLength(1));
+        final firstSubId = calls.single['submission_id'] as String;
 
-      shouldFail = false;
-      await localChat.retryLast();
-      expect(calls, hasLength(2));
-      expect(calls[1]['submission_id'], firstSubId);
+        shouldFail = false;
+        await localChat.retryLast();
+        expect(calls, hasLength(2));
+        expect(calls[1]['submission_id'], firstSubId);
 
-      await localChat.send('second message');
-      expect(calls, hasLength(3));
-      expect(calls[2]['submission_id'], isNot(firstSubId));
-    });
+        await localChat.send('second message');
+        expect(calls, hasLength(3));
+        expect(calls[2]['submission_id'], isNot(firstSubId));
+      },
+    );
   });
 
-  test('NextGenPreferences persist look and interface choice', () async {
+  test('NextGenPreferences persist look choices', () async {
     final prefs = await SharedPreferences.getInstance();
-    await NextGenPreferences.setEnabled(prefs, true);
     await NextGenPreferences.setAccent(prefs, NgAccent.green);
     await NextGenPreferences.setThemeMode(prefs, ThemeMode.dark);
     await NextGenPreferences.pushRecentModel(prefs, 'a/b');
     await NextGenPreferences.pushRecentModel(prefs, 'c/d');
     await NextGenPreferences.pushRecentModel(prefs, 'a/b');
-    nextGenEnabled.value = false;
     NextGenPreferences.load(prefs);
-    expect(nextGenEnabled.value, isTrue);
     expect(NextGenLook.instance.accent, NgAccent.green);
     expect(NextGenLook.instance.themeMode, ThemeMode.dark);
     expect(NextGenPreferences.recentModels(prefs), ['a/b', 'c/d']);
-    await NextGenPreferences.setEnabled(prefs, false);
     await NextGenPreferences.setAccent(prefs, NgAccent.blue);
     await NextGenPreferences.setThemeMode(prefs, ThemeMode.system);
   });
@@ -368,48 +370,8 @@ void main() {
     expect(theme.extensions.length, greaterThan(1));
   });
 
-  testWidgets('setup switches between Classic and NextGen with explanations', (
-    tester,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await NextGenPreferences.setEnabled(prefs, false);
-    addTearDown(() => nextGenEnabled.value = false);
-    await tester.pumpWidget(HermesApp(connManager: ConnectionManager(prefs)));
-    await tester.pumpAndSettle();
-    expect(find.text('Welcome to Ares'), findsNothing);
-    expect(find.byKey(const Key('setup-interface-choice')), findsOneWidget);
-    expect(
-      find.textContaining(
-        'The original Ares workspace, with full connection controls and every Classic setting.',
-      ),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.byKey(const Key('setup-interface-nextgen')));
-    await tester.pumpAndSettle();
-    expect(nextGenEnabled.value, isTrue);
-    expect(prefs.getBool(NextGenPreferences.enabledKey), isTrue);
-    expect(find.text('Welcome to Ares'), findsOneWidget);
-    expect(find.text('Dashboard address'), findsOneWidget);
-    expect(find.text('Find on my network'), findsOneWidget);
-    expect(
-      find.textContaining(
-        'A newer look with one dashboard sign-in, live plans, subagents and notifications.',
-      ),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.byKey(const Key('setup-interface-classic')));
-    await tester.pumpAndSettle();
-    expect(nextGenEnabled.value, isFalse);
-    expect(find.text('Welcome to Ares'), findsNothing);
-    expect(prefs.getBool(NextGenPreferences.enabledKey), isFalse);
-  });
-
   testWidgets('connect screen explains an unreachable address', (tester) async {
     final prefs = await SharedPreferences.getInstance();
-    await NextGenPreferences.setEnabled(prefs, true);
-    addTearDown(() => nextGenEnabled.value = false);
     await tester.pumpWidget(HermesApp(connManager: ConnectionManager(prefs)));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'ftp://nope');
@@ -419,7 +381,5 @@ void main() {
       find.textContaining('must start with http:// or https://'),
       findsOneWidget,
     );
-    unawaited(NextGenPreferences.setEnabled(prefs, false));
-    await tester.pumpAndSettle();
   });
 }

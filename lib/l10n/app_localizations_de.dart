@@ -4018,13 +4018,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Öffne die Sitzungsliste, um einen Chat auszuwählen. Dein Entwurf wurde beibehalten.';
 
   @override
-  String get nextgen_toggle => 'NextGen-Oberfläche';
-
-  @override
-  String get nextgen_toggle_subtitle =>
-      'Ein neues Design mit einer Anmeldung, Live-Chats und Netzwerksuche. Gateways und Chats werden mit dieser Oberfläche geteilt.';
-
-  @override
   String get nextgen_single_login => 'Mit einer Anmeldung verbinden';
 
   @override
@@ -5162,14 +5155,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ng_interface => 'Oberfläche';
 
   @override
-  String get ng_switch_to_the_classic_interface =>
-      'Zur klassischen Oberfläche wechseln';
-
-  @override
-  String get ng_turns_nextgen_off_you_can_turn =>
-      'Deaktiviert NextGen. Du kannst es in den Einstellungen wieder aktivieren.';
-
-  @override
   String get ng_restored => 'Wiederhergestellt';
 
   @override
@@ -5523,10 +5508,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Sanftes Akzentlicht hinter jedem Bildschirm';
 
   @override
-  String get ng_the_new_interface_turn_off_to =>
-      'Die neue Oberfläche. Zum Zurückwechseln zur klassischen ausschalten; deine Gateways und Chats werden geteilt.';
-
-  @override
   String get ng_more_settings => 'Weitere Einstellungen';
 
   @override
@@ -5566,10 +5547,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get classic_interface_only => 'Nur klassische Oberfläche';
-
-  @override
-  String get classic_only_settings_hint =>
-      'Abschnitte mit der Kennzeichnung „Nur klassische Oberfläche“ ändern das klassische Erscheinungsbild und den Chat, nicht NextGen. NextGen bietet eigene Darstellungsoptionen in den Einstellungen.';
 
   @override
   String get attachment_preview_too_large =>
