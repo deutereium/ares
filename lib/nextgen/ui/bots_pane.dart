@@ -52,7 +52,7 @@ class _NgBotsPaneState extends State<NgBotsPane> {
         final empty = groups.isEmpty && sections.isEmpty;
         return ListView(
           key: const Key('ng-bots-list'),
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: 96),
           children: [
             if (empty)
               Padding(
@@ -87,6 +87,7 @@ class _NgBotsPaneState extends State<NgBotsPane> {
                   bot: bot,
                   bytes: model.avatarBytes(bot.name),
                   unread: model.isBotUnread(bot.name),
+                  running: model.isRunning(bot),
                   onTap: () => widget.onOpenBot(bot),
                   onManage: () => _manageBot(bot),
                 ),
@@ -199,6 +200,7 @@ class _BotRow extends StatelessWidget {
     required this.bot,
     required this.bytes,
     required this.unread,
+    required this.running,
     required this.onTap,
     required this.onManage,
   });
@@ -206,6 +208,7 @@ class _BotRow extends StatelessWidget {
   final NgBot bot;
   final Uint8List? bytes;
   final bool unread;
+  final bool running;
   final VoidCallback onTap;
   final VoidCallback onManage;
 
@@ -231,6 +234,19 @@ class _BotRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (running)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: SizedBox(
+                key: Key('ng-bot-running-${bot.name}'),
+                width: 10,
+                height: 10,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  color: c.accent,
+                ),
+              ),
+            ),
           if (unread)
             Padding(
               padding: const EdgeInsets.only(right: 6),

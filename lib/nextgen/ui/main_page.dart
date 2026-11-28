@@ -128,7 +128,7 @@ class _NgMainPageState extends State<_NgMainContent>
     final sessions = _sessions;
     if (sessions == null) {
       _sessions = NgSessionsModel(scope)..isKnownRunning = _knownRunning;
-      _bots = NgBotsModel(scope);
+      _bots = NgBotsModel(scope)..isKnownRunning = _knownRunning;
       _bots!.startPolling();
       unawaited(_sessions!.refresh());
       final last =
@@ -139,7 +139,11 @@ class _NgMainPageState extends State<_NgMainContent>
     } else {
       sessions.scope = scope;
       sessions.isKnownRunning = _knownRunning;
-      _bots?.adoptScope(scope);
+      final bots = _bots;
+      if (bots != null) {
+        bots.adoptScope(scope);
+        bots.isKnownRunning = _knownRunning;
+      }
     }
   }
 
@@ -478,7 +482,10 @@ class _NgMainPageState extends State<_NgMainContent>
       final stored = chat.storedId;
       if (stored != null) _cancelReply(stored);
     }
-    if (chat.running != _chatWasRunning) _sessions?.poke();
+    if (chat.running != _chatWasRunning) {
+      _sessions?.poke();
+      _bots?.poke();
+    }
     _chatWasRunning = chat.running;
     nextGenTurnActive.value = chat.running;
   }
@@ -486,6 +493,7 @@ class _NgMainPageState extends State<_NgMainContent>
   void _turnFinished(NgChatController chat) {
     // Clear the sidebar's spinner before the list refresh lands.
     _sessions?.poke();
+    _bots?.poke();
     unawaited(_sessions?.refresh());
     if (!mounted) return;
     final label = chat.title.isEmpty ? ngL.ng_hermes_replied : chat.title;

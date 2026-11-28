@@ -22,6 +22,7 @@ class NgBot {
     required this.hasAvatar,
     this.canonicalActiveMs = 0,
     this.lastSessionActiveMs = 0,
+    this.workerActiveMs = 0,
     this.sessionId,
     this.sessionTitle,
     this.model,
@@ -42,6 +43,10 @@ class NgBot {
 
   /// Activity of the newest ordinary session on the bot's profile.
   final int lastSessionActiveMs;
+
+  /// Heartbeat of the newest kanban/tool worker on this profile. Workers stay
+  /// out of conversation lists, so this is the only sign a profile is busy.
+  final int workerActiveMs;
 
   /// The clock the unread watermark follows: the canonical chat when there is
   /// one, otherwise the newest ordinary session.
@@ -192,6 +197,37 @@ class NgBotsModel extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   Timer? _poll;
+
+  /// The running state a chat controller already knows for [id], or null when
+  /// this app has not loaded that chat.
+  bool? Function(String id)? isKnownRunning;
+
+  /// A bot is busy when its open chat is mid-turn, or when a delegated worker
+  /// on its profile still heartbeats. Desktop uses a wider window for workers
+  /// (one missed 60s heartbeat) than for an ordinary live chat. A bot whose
+  /// chat this app has not loaded falls back to the canonical/last-session
+  /// recency window, mirroring the Sessions tab's liveness fallback.
+  bool isRunning(NgBot bot) {
+    final id = bot.sessionId;
+    final known = id != null && id.isNotEmpty
+        ? isKnownRunning?.call(id)
+        : null;
+    // A loaded chat that is mid-turn spins at once.
+    if (known == true) return true;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Workers never appear in the chat list, so their heartbeat is the only
+    // sign a profile is busy — even when its canonical chat is loaded and idle.
+    if (bot.workerActiveMs > 0 && now - bot.workerActiveMs < 150 * 1000) {
+      return true;
+    }
+    // A loaded chat that is not running must stop the spinner at once.
+    if (known == false) return false;
+    final activity = bot.activityMs;
+    return activity > 0 && now - activity < 90 * 1000;
+  }
+
+  /// Wakes the pane when a chat's running state changes, without a round trip.
+  void poke() => notifyListeners();
 
   List<NgBot> get bots => _bots;
   List<NgGroupChat> get groups => _groups;
@@ -375,9 +411,10 @@ class NgBotsModel extends ChangeNotifier {
         ? _seconds(canonical['last_active'])
         : 0;
     final lastSessionMs = last.isNotEmpty ? _seconds(last['last_active']) : 0;
+    final workerMs = worker.isNotEmpty ? _seconds(worker['last_active']) : 0;
     final lastMs = [
       _seconds(previewSource['last_active']),
-      _seconds(worker['last_active']),
+      workerMs,
     ].reduce((a, b) => a > b ? a : b);
     final title = (botsMeta['title']?.toString() ?? '').trim().isNotEmpty
         ? (botsMeta['title']?.toString() ?? '').trim()
@@ -398,6 +435,7 @@ class NgBotsModel extends ChangeNotifier {
       hasAvatar: row['has_avatar'] == true,
       canonicalActiveMs: canonicalMs,
       lastSessionActiveMs: lastSessionMs,
+      workerActiveMs: workerMs,
       sessionId:
           canonical['resolved_id']?.toString() ?? canonical['id']?.toString(),
       sessionTitle: canonical['title']?.toString(),

@@ -2265,8 +2265,37 @@ class _ToolRow extends StatefulWidget {
   State<_ToolRow> createState() => _ToolRowState();
 }
 
-class _ToolRowState extends State<_ToolRow> {
+class _ToolRowState extends State<_ToolRow>
+    with SingleTickerProviderStateMixin {
   bool _open = false;
+  late final AnimationController _size = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
+
+  @override
+  void dispose() {
+    _size.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _open = !_open);
+    if (_open) {
+      _size.forward();
+    } else {
+      _size.reverse();
+    }
+    // Collapsing shrinks the transcript; clamp a reversed scroll so the
+    // bottom cannot stay blank until the next drag.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final position = Scrollable.maybeOf(context)?.position;
+      if (position == null || !position.hasPixels) return;
+      final max = position.maxScrollExtent;
+      if (position.pixels > max) position.jumpTo(max);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2283,7 +2312,7 @@ class _ToolRowState extends State<_ToolRow> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          onTap: hasBody ? () => setState(() => _open = !_open) : null,
+          onTap: hasBody ? _toggle : null,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
@@ -2365,51 +2394,483 @@ class _ToolRowState extends State<_ToolRow> {
                       style: NgType.caption.copyWith(color: c.textMuted),
                     ),
                   ),
+                if (hasBody)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: AnimatedRotation(
+                      turns: _open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeInOutCubic,
+                      child: Icon(
+                        Icons.expand_more,
+                        size: 16,
+                        color: c.text3,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
-        if (_open) ...[
-          if (args != null && args.isNotEmpty) ...[
-            _sectionLabel(c, 'Input'),
-            _keyValueBlock(c, args),
-          ] else if (t.input?.isNotEmpty ?? false) ...[
-            _sectionLabel(c, 'Input'),
-            _codeBlock(c, _prettyJson(t.input!)),
-          ],
-          if (t.output?.isNotEmpty ?? false) ...[
-            _sectionLabel(c, 'Result'),
-            _codeBlock(c, _prettyJson(t.output!)),
-          ],
-        ],
+        if (hasBody)
+          AnimatedBuilder(
+            animation: _size,
+            child: _details(c, t, args),
+            builder: (context, child) {
+              if (_size.isDismissed || child == null) {
+                return const SizedBox(width: double.infinity);
+              }
+              return ClipRect(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  heightFactor: Curves.easeInOutCubic.transform(_size.value),
+                  child: child,
+                ),
+              );
+            },
+          ),
       ],
     );
   }
 
-  Widget _sectionLabel(NgColors c, String text) => Padding(
-    padding: const EdgeInsets.only(top: 2, bottom: 4),
-    child: Text(
-      text.toUpperCase(),
-      style: NgType.caption.copyWith(
-        color: c.textMuted,
-        letterSpacing: 0.6,
-        fontWeight: FontWeight.w600,
+  Widget _details(NgColors c, NgTool t, Map<String, dynamic>? args) {
+    final name = t.name.toLowerCase();
+    final result = _toolResultMap(t.output);
+    if (_isPatchTool(name)) return _patchDetails(c, t, args, result);
+    if (_isWriteTool(name)) return _writeDetails(c, t, args, result);
+    if (_isTerminalTool(name)) return _terminalDetails(c, t, args, result);
+    if (_isMemoryTool(name)) return _memoryDetails(c, t, args, result);
+    if (_isSkillTool(name)) return _skillDetails(c, t, args, result);
+    if (_isReadTool(name)) return _readDetails(c, t, args, result);
+    return _genericDetails(c, t, args, result);
+  }
+
+  Widget _patchDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final diff = _patchDiff(args, result);
+    final children = <Widget>[];
+    if (diff != null && diff.trim().isNotEmpty) {
+      children.add(_diffPanel(c, diff));
+    } else {
+      final message = _toolMessage(result) ?? _toolMessage(args);
+      children.add(
+        _plainPanel(
+          c,
+          message?.isNotEmpty == true ? message! : 'No changes',
+          muted: true,
+        ),
+      );
+    }
+    final meta = _resultMeta(c, result);
+    if (meta != null) children.add(meta);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _writeDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final children = <Widget>[];
+    final diff = _patchDiff(args, result);
+    if (diff != null && diff.trim().isNotEmpty) {
+      children.add(_diffPanel(c, diff));
+    } else {
+      final content = args?['content'];
+      if (content is String && content.isNotEmpty) {
+        final buffer = StringBuffer();
+        final path = args?['path']?.toString();
+        if (path != null && path.isNotEmpty) {
+          buffer.writeln('*** Update File: $path');
+        }
+        for (final line in content.split('\n')) {
+          buffer.writeln('+$line');
+        }
+        children.add(_diffPanel(c, buffer.toString()));
+      } else {
+        final message = _toolMessage(result) ?? _toolMessage(args);
+        children.add(
+          _plainPanel(c, message ?? 'Saved', muted: message == null),
+        );
+      }
+    }
+    final meta = _resultMeta(c, result);
+    if (meta != null) children.add(meta);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _terminalDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final command = (args?['command'] ?? args?['cmd'] ?? args?['script'])
+        ?.toString()
+        .trim();
+    final output = _terminalOutput(t, result);
+    final exitCode = result?['exit_code'];
+    final children = <Widget>[
+      if (command != null && command.isNotEmpty) _commandPanel(c, command),
+      if (output != null && output.trim().isNotEmpty) _textPanel(c, output),
+      if (exitCode is int && exitCode != 0)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Exit $exitCode',
+            style: NgType.caption.copyWith(color: c.danger),
+          ),
+        ),
+    ];
+    if (children.isEmpty) {
+      final message = _toolMessage(result);
+      return _plainPanel(c, message ?? 'Done', muted: message == null);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _memoryDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final saved = result?['success'] != false && !t.failed;
+    final message = _toolMessage(result);
+    final count = result?['entry_count'];
+    final purple = _memoryPurple(context);
+    final orange = c.warning;
+    if (saved) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(NgRadii.sm),
+          gradient: LinearGradient(
+            colors: [
+              orange.withValues(alpha: 0.14),
+              purple.withValues(alpha: 0.14),
+            ],
+          ),
+          border: Border.all(color: purple.withValues(alpha: 0.28)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.psychology, size: 16, color: orange),
+                const SizedBox(width: 8),
+                Text(
+                  'Saved to memory',
+                  style: NgType.label.copyWith(
+                    color: orange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                if (count is int)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: purple.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(NgRadii.sm),
+                    ),
+                    child: Text(
+                      '$count ${count == 1 ? 'entry' : 'entries'}',
+                      style: NgType.caption.copyWith(
+                        color: purple,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (message != null && message.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                message,
+                style: NgType.bodySmall.copyWith(color: c.text2),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+    return _plainPanel(
+      c,
+      message ?? (t.failed ? 'Memory write failed' : 'Memory not saved'),
+      warning: true,
+    );
+  }
+
+  Widget _skillDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final name = (result?['name'] ?? args?['name'] ?? args?['skill'])
+        ?.toString()
+        .trim();
+    final description = (result?['description'] ?? args?['description'])
+        ?.toString()
+        .trim();
+    final content = result?['content']?.toString();
+    final skills = result?['skills'];
+    final children = <Widget>[];
+    if (name != null && name.isNotEmpty) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 15, color: c.warning),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: NgType.label.copyWith(
+                    color: c.warning,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (description != null && description.isNotEmpty) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            description,
+            style: NgType.bodySmall.copyWith(color: c.text2),
+          ),
+        ),
+      );
+    }
+    if (skills is List && skills.isNotEmpty) {
+      children.add(
+        _scrollPanel(
+          c,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final row in skills)
+                if (row is Map)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.check,
+                            size: 12,
+                            color: c.success,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (row['name'] ?? '').toString(),
+                                style: NgType.label.copyWith(color: c.text2),
+                              ),
+                              if ((row['description'] ?? '')
+                                  .toString()
+                                  .isNotEmpty)
+                                Text(
+                                  row['description'].toString(),
+                                  style: NgType.caption.copyWith(
+                                    color: c.text3,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      );
+    } else if (content != null && content.isNotEmpty) {
+      children.add(_textPanel(c, content));
+    } else {
+      final message = _toolMessage(result);
+      if (message != null && message.isNotEmpty) {
+        children.add(_plainPanel(c, message, muted: true));
+      } else if (result == null && (t.output?.trim().isNotEmpty ?? false)) {
+        children.add(_textPanel(c, t.output!.trim()));
+      }
+    }
+    if (children.isEmpty) {
+      children.add(
+        _plainPanel(
+          c,
+          t.failed ? 'Skill failed' : 'Done',
+          muted: !t.failed,
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _readDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final path = (args?['path'] ?? args?['file'] ?? args?['filename'])
+        ?.toString();
+    final content = (result?['content'] ??
+            result?['text'] ??
+            result?['data'])
+        ?.toString();
+    final children = <Widget>[];
+    if (path != null && path.isNotEmpty) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            path,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: NgType.caption.copyWith(color: c.textMuted),
+          ),
+        ),
+      );
+    }
+    if (content != null && content.isNotEmpty) {
+      children.add(_textPanel(c, content));
+    } else {
+      final message = _toolMessage(result);
+      if (message != null && message.isNotEmpty) {
+        children.add(_plainPanel(c, message, muted: true));
+      } else if (result == null && (t.output?.trim().isNotEmpty ?? false)) {
+        children.add(_textPanel(c, t.output!.trim()));
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _genericDetails(
+    NgColors c,
+    NgTool t,
+    Map<String, dynamic>? args,
+    Map<String, dynamic>? result,
+  ) {
+    final children = <Widget>[];
+    if (args != null && args.isNotEmpty) {
+      children.add(_keyValuePanel(c, args));
+    } else if (t.input?.isNotEmpty ?? false) {
+      children.add(_textPanel(c, t.input!));
+    }
+    if (t.output?.isNotEmpty ?? false) {
+      if (result != null) {
+        final visible = <String, dynamic>{};
+        for (final entry in result.entries) {
+          if (_hiddenResultKeys.contains(entry.key)) continue;
+          if (_isEmptyValue(entry.value)) continue;
+          visible[entry.key] = entry.value;
+        }
+        if (visible.isNotEmpty) {
+          children.add(_keyValuePanel(c, visible));
+        } else {
+          final message = _toolMessage(result);
+          if (message != null && message.isNotEmpty) {
+            children.add(_plainPanel(c, message, muted: true));
+          }
+        }
+      } else {
+        children.add(_textPanel(c, t.output!));
+      }
+    }
+    if (children.isEmpty) {
+      final message = _toolMessage(result) ?? t.summary ?? t.detail;
+      children.add(_plainPanel(c, message ?? 'Done', muted: true));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _diffPanel(NgColors c, String diff) =>
+      _scrollPanel(c, _DiffLines(diff: diff, colors: c));
+
+  Widget _textPanel(NgColors c, String text) => _scrollPanel(
+    c,
+    SelectionArea(
+      child: Text(
+        _clipToolText(text),
+        style: NgType.code.copyWith(color: c.text2, fontSize: 11.5),
       ),
     ),
   );
 
-  Widget _keyValueBlock(NgColors c, Map<String, dynamic> args) => Container(
+  Widget _plainPanel(
+    NgColors c,
+    String text, {
+    bool muted = false,
+    bool warning = false,
+  }) => Container(
     width: double.infinity,
     margin: const EdgeInsets.only(bottom: 6),
-    padding: const EdgeInsets.all(10),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     decoration: BoxDecoration(
-      color: c.well,
+      color: warning ? c.warningSoft : c.well,
       borderRadius: BorderRadius.circular(NgRadii.sm),
     ),
-    child: Column(
+    child: Text(
+      text,
+      style: NgType.bodySmall.copyWith(
+        color: warning ? c.warning : (muted ? c.text3 : c.text2),
+      ),
+    ),
+  );
+
+  Widget _keyValuePanel(NgColors c, Map<String, dynamic> values) => _scrollPanel(
+    c,
+    Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final entry in args.entries)
+        for (final entry in values.entries)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Column(
@@ -2420,11 +2881,13 @@ class _ToolRowState extends State<_ToolRow> {
                   style: NgType.caption.copyWith(color: c.textMuted),
                 ),
                 const SizedBox(height: 2),
-                SelectableText(
-                  _clipToolText(_toolValueText(entry.value)),
-                  style: NgType.code.copyWith(
-                    color: c.text2,
-                    fontSize: 11.5,
+                SelectionArea(
+                  child: Text(
+                    _clipToolText(_toolValueText(entry.value)),
+                    style: NgType.code.copyWith(
+                      color: c.text2,
+                      fontSize: 11.5,
+                    ),
                   ),
                 ),
               ],
@@ -2434,19 +2897,333 @@ class _ToolRowState extends State<_ToolRow> {
     ),
   );
 
-  Widget _codeBlock(NgColors c, String text) => Container(
+  Widget _commandPanel(NgColors c, String command) => Container(
     width: double.infinity,
     margin: const EdgeInsets.only(bottom: 6),
-    padding: const EdgeInsets.all(10),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     decoration: BoxDecoration(
       color: c.well,
       borderRadius: BorderRadius.circular(NgRadii.sm),
     ),
-    child: SelectableText(
-      _clipToolText(text),
-      style: NgType.code.copyWith(color: c.text2, fontSize: 11.5),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 240),
+      child: SingleChildScrollView(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              r'$',
+              style: NgType.code.copyWith(
+                color: c.success,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SelectionArea(
+                child: Text(
+                  _clipToolText(command),
+                  style: NgType.code.copyWith(color: c.text, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
+
+  Widget _scrollPanel(
+    NgColors c,
+    Widget child, {
+    double maxHeight = 240,
+  }) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 6),
+    decoration: BoxDecoration(
+      color: c.well,
+      borderRadius: BorderRadius.circular(NgRadii.sm),
+    ),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(10),
+        child: child,
+      ),
+    ),
+  );
+
+  Widget? _resultMeta(NgColors c, Map<String, dynamic>? result) {
+    if (result == null) return null;
+    final parts = <String>[];
+    final modified = result['files_modified'];
+    if (modified is List && modified.isNotEmpty) {
+      parts.add(
+        modified.length == 1
+            ? modified.first.toString()
+            : '${modified.length} files',
+      );
+    }
+    final created = result['files_created'];
+    if (created is List) {
+      for (final file in created) {
+        parts.add('created ${file.toString()}');
+      }
+    }
+    final bytes = result['bytes_written'];
+    if (bytes is int) parts.add('$bytes bytes');
+    if (parts.isEmpty) return null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        parts.join(' · '),
+        style: NgType.caption.copyWith(color: c.textMuted),
+      ),
+    );
+  }
+}
+
+Map<String, dynamic>? _toolResultMap(String? output) {
+  final text = output?.trim();
+  if (text == null || text.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(text);
+    if (decoded is Map) return decoded.cast<String, dynamic>();
+  } catch (_) {
+    // Plain-text results are rendered as text.
+  }
+  return null;
+}
+
+String? _toolMessage(Map<String, dynamic>? result) {
+  if (result == null) return null;
+  for (final key in const ['message', 'error', 'detail', 'summary']) {
+    final value = result[key];
+    if (value is String && value.trim().isNotEmpty) return value.trim();
+  }
+  return null;
+}
+
+String? _patchDiff(Map<String, dynamic>? args, Map<String, dynamic>? result) {
+  if (result != null) {
+    for (final key in const ['diff', 'inline_diff']) {
+      final value = result[key];
+      if (value is String && value.trim().isNotEmpty) return value;
+    }
+  }
+  if (args != null) {
+    final patch = args['patch'];
+    if (patch is String && patch.trim().isNotEmpty) return patch;
+    final oldText = args['old_string'];
+    final newText = args['new_string'];
+    if (oldText is String || newText is String) {
+      final buffer = StringBuffer();
+      final path = args['path']?.toString();
+      if (path != null && path.isNotEmpty) {
+        buffer.writeln('*** Update File: $path');
+      }
+      for (final line in (oldText is String ? oldText : '').split('\n')) {
+        buffer.writeln('-$line');
+      }
+      for (final line in (newText is String ? newText : '').split('\n')) {
+        buffer.writeln('+$line');
+      }
+      return buffer.toString();
+    }
+  }
+  return null;
+}
+
+String? _terminalOutput(NgTool t, Map<String, dynamic>? result) {
+  if (result != null) {
+    final parts = <String>[];
+    for (final key in const ['output', 'stdout', 'stderr']) {
+      final value = result[key];
+      if (value is String && value.trim().isNotEmpty) {
+        parts.add(value.trimRight());
+      }
+    }
+    final lines = result['lines'];
+    if (lines is List && lines.isNotEmpty) {
+      parts.add(lines.whereType<String>().join('\n'));
+    }
+    if (parts.isNotEmpty) return parts.join('\n');
+    final message = _toolMessage(result);
+    if (message != null) return message;
+    if (result['success'] == true) return null;
+  }
+  final raw = t.output?.trim();
+  if (raw == null || raw.isEmpty) return null;
+  if (raw.startsWith('{') || raw.startsWith('[')) return null;
+  return raw;
+}
+
+bool _isPatchTool(String name) =>
+    name == 'patch' ||
+    name.contains('apply_patch') ||
+    name.contains('diff');
+
+bool _isWriteTool(String name) =>
+    name == 'write_file' ||
+    name == 'write' ||
+    name == 'edit_file' ||
+    name == 'edit' ||
+    name.contains('write_file') ||
+    name.contains('edit_file');
+
+bool _isTerminalTool(String name) =>
+    name == 'terminal' ||
+    name == 'shell' ||
+    name == 'bash' ||
+    name == 'execute_code' ||
+    name.contains('terminal');
+
+bool _isMemoryTool(String name) => name == 'memory' || name.contains('memory');
+
+bool _isSkillTool(String name) =>
+    name.startsWith('skill') || name.contains('skill_');
+
+bool _isReadTool(String name) =>
+    name == 'read_file' || name == 'read' || name.contains('read_file');
+
+bool _isEmptyValue(Object? value) {
+  if (value == null) return true;
+  if (value is String) return value.trim().isEmpty;
+  if (value is Map) return value.isEmpty;
+  if (value is List) return value.isEmpty;
+  return false;
+}
+
+const Set<String> _hiddenResultKeys = {
+  'success',
+  'done',
+  'note',
+  'verified',
+  '_source_path',
+  'path',
+  'resolved_path',
+  'hint',
+  'usage_hint',
+};
+
+Color _memoryPurple(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? const Color(0xFFB69CFF)
+    : const Color(0xFF7C3AED);
+
+enum _DiffKind { add, remove, context, meta }
+
+class _DiffRow {
+  const _DiffRow(this.kind, this.text);
+  final _DiffKind kind;
+  final String text;
+}
+
+List<_DiffRow> _diffRows(String diff) {
+  final rows = <_DiffRow>[];
+  for (final raw in diff.split('\n')) {
+    if (rows.length >= 800) {
+      rows.add(const _DiffRow(_DiffKind.meta, '… diff truncated'));
+      break;
+    }
+    if (raw.startsWith('diff --git') ||
+        raw.startsWith('index ') ||
+        raw.startsWith('--- ') ||
+        raw.startsWith('+++ ')) {
+      continue;
+    }
+    if (raw.startsWith('*** Begin Patch') ||
+        raw.startsWith('*** End Patch')) {
+      continue;
+    }
+    if (raw.startsWith('*** Update File:') ||
+        raw.startsWith('*** Add File:') ||
+        raw.startsWith('*** Delete File:')) {
+      rows.add(_DiffRow(_DiffKind.meta, raw.replaceFirst('*** ', '')));
+      continue;
+    }
+    if (raw.startsWith('@@')) {
+      rows.add(_DiffRow(_DiffKind.meta, raw));
+      continue;
+    }
+    if (raw.startsWith('+')) {
+      rows.add(_DiffRow(_DiffKind.add, raw.substring(1)));
+    } else if (raw.startsWith('-')) {
+      rows.add(_DiffRow(_DiffKind.remove, raw.substring(1)));
+    } else {
+      rows.add(_DiffRow(_DiffKind.context, raw));
+    }
+  }
+  return rows;
+}
+
+class _DiffLines extends StatelessWidget {
+  const _DiffLines({required this.diff, required this.colors});
+
+  final String diff;
+  final NgColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _diffRows(diff);
+    return SelectionArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final row in rows)
+            Container(
+              decoration: switch (row.kind) {
+                _DiffKind.add => BoxDecoration(
+                  color: colors.success.withValues(alpha: 0.12),
+                ),
+                _DiffKind.remove => BoxDecoration(
+                  color: colors.danger.withValues(alpha: 0.12),
+                ),
+                _ => null,
+              },
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    child: Text(
+                      switch (row.kind) {
+                        _DiffKind.add => '+',
+                        _DiffKind.remove => '-',
+                        _ => ' ',
+                      },
+                      style: NgType.code.copyWith(
+                        fontSize: 11.5,
+                        height: 1.35,
+                        color: switch (row.kind) {
+                          _DiffKind.add => colors.success,
+                          _DiffKind.remove => colors.danger,
+                          _ => colors.textMuted,
+                        },
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      row.text.isEmpty ? ' ' : row.text,
+                      style: NgType.code.copyWith(
+                        fontSize: 11.5,
+                        height: 1.35,
+                        color: row.kind == _DiffKind.meta
+                            ? colors.textMuted
+                            : colors.text2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 String _clipToolText(String text) =>
@@ -2479,6 +3256,9 @@ String _toolHumanize(String name) {
       n.contains('exec') ||
       n.contains('command')) {
     return (icon: Icons.terminal, label: 'Terminal');
+  }
+  if (n.contains('memory')) {
+    return (icon: Icons.psychology, label: 'Memory');
   }
   if (n.contains('skill')) {
     return (icon: Icons.auto_awesome, label: 'Skill');

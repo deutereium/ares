@@ -3364,6 +3364,52 @@ class DashboardClient {
     return _decodeMapResponse(res);
   }
 
+  /// Posts one file as a multipart upload. The JSON auth headers are reused
+  /// without their content type so the multipart boundary wins.
+  Future<Map<String, dynamic>> apiUpload(
+    String endpoint, {
+    required String filename,
+    required List<int> bytes,
+    String field = 'file',
+    Map<String, String>? fields,
+    Map<String, String>? queryParameters,
+    bool retried = false,
+    Duration timeout = const Duration(minutes: 2),
+  }) async {
+    final authGeneration = _authGeneration;
+    final headers = Map<String, String>.of(await _authHeaders())
+      ..remove('Content-Type')
+      ..remove('content-type');
+    final uri = Uri.parse(
+      '$_baseUrl/api/$endpoint',
+    ).replace(queryParameters: queryParameters);
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(headers)
+      ..files.add(
+        http.MultipartFile.fromBytes(field, bytes, filename: filename),
+      );
+    if (fields != null) request.fields.addAll(fields);
+    final streamed = await _http.send(request).timeout(timeout);
+    final res = await http.Response.fromStream(streamed).timeout(timeout);
+    if (res.statusCode == 401 && !retried) {
+      _resetAuth(ifGeneration: authGeneration);
+      return apiUpload(
+        endpoint,
+        filename: filename,
+        bytes: bytes,
+        field: field,
+        fields: fields,
+        queryParameters: queryParameters,
+        retried: true,
+        timeout: timeout,
+      );
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception(_apiFailure(res));
+    }
+    return _decodeMapResponse(res);
+  }
+
   Future<void> apiDelete(
     String endpoint, {
     Map<String, String>? queryParameters,

@@ -74,6 +74,31 @@ class _FakeApi implements NgKanbanApi {
     calls.add((method: 'comment', body: {'id': id, 'body': body}));
     return {'ok': true};
   }
+
+  @override
+  Future<Map<String, dynamic>> linkTasks(
+    String parentId,
+    String childId,
+  ) async {
+    calls.add((
+      method: 'link',
+      body: {'parent_id': parentId, 'child_id': childId},
+    ));
+    return {'ok': true};
+  }
+
+  @override
+  Future<Map<String, dynamic>> uploadAttachment(
+    String taskId, {
+    required String filename,
+    required List<int> bytes,
+  }) async {
+    calls.add((
+      method: 'attach',
+      body: {'id': taskId, 'filename': filename, 'bytes': bytes.length},
+    ));
+    return {'ok': true};
+  }
 }
 
 void main() {
@@ -156,6 +181,29 @@ void main() {
     expect(create['triage'], isFalse);
     final move = api.calls.where((c) => c.method == 'move').single.body;
     expect(move, {'id': 'new', 'status': 'todo'});
+  });
+
+  test('parents ride on create; children and files link afterwards', () async {
+    final api = _FakeApi();
+    final model = NgKanbanModel(api);
+    addTearDown(model.dispose);
+
+    final task = await model.createTask(
+      title: 'Child',
+      placement: 'todo',
+      parentIds: const ['p1'],
+    );
+    await model.linkChild(task.id, 'c1');
+    await model.uploadAttachment(task.id, filename: 'a.txt', bytes: [1, 2, 3]);
+
+    final create = api.calls.firstWhere((c) => c.method == 'create').body;
+    expect(create['parents'], ['p1']);
+    final link = api.calls.firstWhere((c) => c.method == 'link').body;
+    expect(link, {'parent_id': 'new', 'child_id': 'c1'});
+    final attach = api.calls.firstWhere((c) => c.method == 'attach').body;
+    expect(attach['id'], 'new');
+    expect(attach['filename'], 'a.txt');
+    expect(attach['bytes'], 3);
   });
 
   test('a completion note rides on the move to done', () async {

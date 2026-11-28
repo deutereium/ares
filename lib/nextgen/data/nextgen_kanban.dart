@@ -315,6 +315,12 @@ abstract class NgKanbanApi {
     String? summary,
   });
   Future<Map<String, dynamic>> addComment(String id, String body);
+  Future<Map<String, dynamic>> linkTasks(String parentId, String childId);
+  Future<Map<String, dynamic>> uploadAttachment(
+    String taskId, {
+    required String filename,
+    required List<int> bytes,
+  });
 }
 
 class DashboardKanbanApi implements NgKanbanApi {
@@ -356,6 +362,25 @@ class DashboardKanbanApi implements NgKanbanApi {
         '$_base/tasks/$id/comments',
         body: {'body': body, 'author': 'ares'},
       );
+
+  @override
+  Future<Map<String, dynamic>> linkTasks(String parentId, String childId) =>
+      _dashboard.apiPost(
+        '$_base/links',
+        body: {'parent_id': parentId, 'child_id': childId},
+      );
+
+  @override
+  Future<Map<String, dynamic>> uploadAttachment(
+    String taskId, {
+    required String filename,
+    required List<int> bytes,
+  }) => _dashboard.apiUpload(
+    '$_base/tasks/$taskId/attachments',
+    filename: filename,
+    bytes: bytes,
+    field: 'file',
+  );
 }
 
 /// Board state for one kanban board. The page starts and stops polling; the
@@ -418,6 +443,7 @@ class NgKanbanModel extends ChangeNotifier {
     String? assignee,
     int priority = 0,
     String placement = 'ready',
+    List<String> parentIds = const <String>[],
   }) async {
     final lane = ngKanbanPlacements.contains(placement) ? placement : 'ready';
     final json = await api.createTask({
@@ -426,6 +452,7 @@ class NgKanbanModel extends ChangeNotifier {
       if (assignee != null && assignee.isNotEmpty) 'assignee': assignee,
       'priority': priority,
       'triage': lane == 'triage',
+      if (parentIds.isNotEmpty) 'parents': parentIds,
     });
     var created = NgKanbanTask.fromJson(_map(json['task']));
     if (created.id.isNotEmpty && lane != 'triage' && created.status != lane) {
@@ -435,6 +462,19 @@ class NgKanbanModel extends ChangeNotifier {
     await refresh();
     return created;
   }
+
+  /// Links an existing card as a child of [parentId]. Create cannot attach
+  /// children, so the sheet links them after the card exists.
+  Future<void> linkChild(String parentId, String childId) =>
+      api.linkTasks(parentId, childId);
+
+  /// Uploads a file to an existing card. Hermes stores attachments on their own
+  /// endpoint, so this runs after the card is created.
+  Future<void> uploadAttachment(
+    String taskId, {
+    required String filename,
+    required List<int> bytes,
+  }) => api.uploadAttachment(taskId, filename: filename, bytes: bytes);
 
   Future<NgKanbanDetail> loadDetail(String id) async {
     final json = await api.task(id);

@@ -1176,118 +1176,155 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                     ],
                   ),
                 ),
-                if (_tab == NgSidebarTab.bots)
-                  Expanded(
-                    child: NgBotsPane(
-                      model: _bots!,
-                      onOpenBot: widget.onOpenBot ?? (_) {},
-                      onOpenGroup: widget.onOpenGroup ?? (_) {},
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: widget.model.refresh,
-                      child: ListView(
-                        controller: _scroll,
-                        padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
-                        children: [
-                          const SizedBox(height: 8),
-                          _filters(
-                            c,
-                            chats
-                                .where(
-                                  (s) =>
-                                      needsYou.contains(s.id) ||
-                                      widget.model.isUnread(s),
-                                )
-                                .length,
-                          ),
-                          if (pinned.isNotEmpty) ...[
-                            NgSectionLabel(ngL.ng_pinned),
-                            for (final s in pinned) _tile(c, s, needsYou),
-                          ],
-                          if (pinned.isNotEmpty && rest.isNotEmpty)
-                            NgSectionLabel(ngL.ng_recent),
-                          if (widget.model.error != null && all.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Text(
-                                widget.model.error!,
-                                style: NgType.bodySmall.copyWith(
-                                  color: c.danger,
-                                ),
-                              ),
-                            )
-                          else if (!widget.model.loading && filtered.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(
-                                switch (_filter) {
-                                  _ when widget.model.query.isNotEmpty =>
-                                    ngL.ng_no_chats_match,
-                                  NgSidebarFilter.all => ngL.ng_no_chats_yet,
-                                  NgSidebarFilter.running =>
-                                    ngL.ng_nothing_is_running,
-                                  NgSidebarFilter.needsYou =>
-                                    ngL.ng_nothing_is_waiting_on_you,
-                                  NgSidebarFilter.crons =>
-                                    AppLocalizations.of(
-                                          context,
-                                        )?.cron_conversations_empty ??
-                                        'Conversations from scheduled jobs appear here, including older runs.',
-                                },
-                                textAlign: TextAlign.center,
-                                style: NgType.bodySmall.copyWith(
-                                  color: c.text3,
-                                ),
-                              ),
-                            ),
-                          for (final s in rest) _tile(c, s, needsYou),
-                          // A short list has no scroll extent, so scroll-only
-                          // paging cannot grow it; offer an explicit read on.
-                          // Ten rows show first; each tap reveals ten more, and
-                          // only then asks the gateway for another page.
-                          if ((hasLocalMore || widget.model.hasMore) &&
-                              !widget.model.loadingMore &&
-                              widget.model.query.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Center(
-                                child: TextButton.icon(
-                                  key: const Key('ng-sessions-load-more'),
-                                  onPressed: () {
-                                    setState(() => _visible += _rowCap);
-                                    if (!hasLocalMore && widget.model.hasMore) {
-                                      unawaited(widget.model.loadMore());
-                                    }
-                                  },
-                                  icon: const Icon(Icons.expand_more, size: 18),
-                                  label: Text(
-                                    AppLocalizations.of(context)?.load_more ??
-                                        'Load more…',
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: _tab == NgSidebarTab.bots
+                            ? NgBotsPane(
+                                model: _bots!,
+                                onOpenBot: widget.onOpenBot ?? (_) {},
+                                onOpenGroup: widget.onOpenGroup ?? (_) {},
+                              )
+                            : RefreshIndicator(
+                                onRefresh: widget.model.refresh,
+                                child: ListView(
+                                  controller: _scroll,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    10,
+                                    4,
+                                    10,
+                                    96,
                                   ),
+                                  children: [
+                                    const SizedBox(height: 8),
+                                    _filters(
+                                      c,
+                                      chats
+                                          .where(
+                                            (s) =>
+                                                needsYou.contains(s.id) ||
+                                                widget.model.isUnread(s),
+                                          )
+                                          .length,
+                                    ),
+                                    if (pinned.isNotEmpty) ...[
+                                      NgSectionLabel(ngL.ng_pinned),
+                                      for (final s in pinned)
+                                        _tile(c, s, needsYou),
+                                    ],
+                                    if (pinned.isNotEmpty && rest.isNotEmpty)
+                                      NgSectionLabel(ngL.ng_recent),
+                                    if (widget.model.error != null &&
+                                        all.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Text(
+                                          widget.model.error!,
+                                          style: NgType.bodySmall.copyWith(
+                                            color: c.danger,
+                                          ),
+                                        ),
+                                      )
+                                    else if (!widget.model.loading &&
+                                        filtered.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.all(24),
+                                        child: Text(
+                                          switch (_filter) {
+                                            _ when widget
+                                                    .model
+                                                    .query
+                                                    .isNotEmpty =>
+                                              ngL.ng_no_chats_match,
+                                            NgSidebarFilter.all =>
+                                              ngL.ng_no_chats_yet,
+                                            NgSidebarFilter.running =>
+                                              ngL.ng_nothing_is_running,
+                                            NgSidebarFilter.needsYou =>
+                                              ngL.ng_nothing_is_waiting_on_you,
+                                            NgSidebarFilter.crons =>
+                                              AppLocalizations.of(
+                                                    context,
+                                                  )?.cron_conversations_empty ??
+                                                  'Conversations from scheduled jobs appear here, including older runs.',
+                                          },
+                                          textAlign: TextAlign.center,
+                                          style: NgType.bodySmall.copyWith(
+                                            color: c.text3,
+                                          ),
+                                        ),
+                                      ),
+                                    for (final s in rest)
+                                      _tile(c, s, needsYou),
+                                    // A short list has no scroll extent, so
+                                    // scroll-only paging cannot grow it; offer
+                                    // an explicit read on. Ten rows show first;
+                                    // each tap reveals ten more, and only then
+                                    // asks the gateway for another page.
+                                    if ((hasLocalMore ||
+                                            widget.model.hasMore) &&
+                                        !widget.model.loadingMore &&
+                                        widget.model.query.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 6,
+                                        ),
+                                        child: Center(
+                                          child: TextButton.icon(
+                                            key: const Key(
+                                              'ng-sessions-load-more',
+                                            ),
+                                            onPressed: () {
+                                              setState(
+                                                () => _visible += _rowCap,
+                                              );
+                                              if (!hasLocalMore &&
+                                                  widget.model.hasMore) {
+                                                unawaited(
+                                                  widget.model.loadMore(),
+                                                );
+                                              }
+                                            },
+                                            icon: const Icon(
+                                              Icons.expand_more,
+                                              size: 18,
+                                            ),
+                                            label: Text(
+                                              AppLocalizations.of(
+                                                    context,
+                                                  )?.load_more ??
+                                                  'Load more…',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (widget.model.loadingMore)
+                                      const Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          if (widget.model.loadingMore)
-                            const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
                       ),
-                    ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 12,
+                        child: Center(child: _newChatPill(c)),
+                      ),
+                    ],
                   ),
-                _newChatPill(c),
+                ),
                 _backendStatus(c, scope),
               ],
             );
@@ -1384,8 +1421,10 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   Widget _tabToggle(NgColors c) {
     Widget tab(NgSidebarTab value, String label) {
       final selected = _tab == value;
-      final showDot =
-          value == NgSidebarTab.bots && (_bots?.unreadBotCount ?? 0) > 0;
+      final showDot = switch (value) {
+        NgSidebarTab.bots => (_bots?.unreadBotCount ?? 0) > 0,
+        NgSidebarTab.sessions => widget.model.unreadCount > 0,
+      };
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
@@ -1415,7 +1454,11 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                   right: -5,
                   top: -3,
                   child: Container(
-                    key: const Key('ng-bots-unread-dot'),
+                    key: Key(
+                      value == NgSidebarTab.bots
+                          ? 'ng-bots-unread-dot'
+                          : 'ng-sessions-unread-dot',
+                    ),
                     width: 7,
                     height: 7,
                     decoration: BoxDecoration(
@@ -1666,24 +1709,19 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   }
 
   Widget _newChatPill(NgColors c) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-      child: Center(
-        child: FilledButton.icon(
-          key: const Key('ng-new-chat-pill'),
-          style: FilledButton.styleFrom(
-            backgroundColor: c.accent,
-            foregroundColor: c.onAccent,
-            shape: const StadiumBorder(),
-            elevation: 6,
-            shadowColor: c.accent.withValues(alpha: 0.45),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          ),
-          onPressed: _newChatPressed,
-          icon: const Icon(Icons.edit_square, size: 18),
-          label: Text(ngL.ng_new_chat),
-        ),
+    return FilledButton.icon(
+      key: const Key('ng-new-chat-pill'),
+      style: FilledButton.styleFrom(
+        backgroundColor: c.accent,
+        foregroundColor: c.onAccent,
+        shape: const StadiumBorder(),
+        elevation: 6,
+        shadowColor: c.accent.withValues(alpha: 0.45),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
       ),
+      onPressed: _newChatPressed,
+      icon: const Icon(Icons.edit_square, size: 18),
+      label: Text(ngL.ng_new_chat),
     );
   }
 
