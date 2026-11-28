@@ -62,6 +62,7 @@ class _NgMainPageState extends State<_NgMainContent>
   /// Max 3 parked + 1 active = 4 total.
   final LinkedHashMap<String, NgChatController> _cache = LinkedHashMap();
   static const _maxCached = 3;
+  int _draftSeq = 0;
 
   @override
   void initState() {
@@ -190,6 +191,24 @@ class _NgMainPageState extends State<_NgMainContent>
     return p == null || p.isEmpty ? id : '$p\u0000$id';
   }
 
+  /// Keep the parked set bounded without killing a chat whose first send is
+  /// still in flight. Running controllers are never evicted: disposing one
+  /// mid-send sets `_disposed` and drops the message. They become evictable
+  /// once their turn ends.
+  void _evictParked() {
+    while (_cache.length > _maxCached) {
+      String? victim;
+      for (final key in _cache.keys) {
+        if (!(_cache[key]?.running ?? false)) {
+          victim = key;
+          break;
+        }
+      }
+      if (victim == null) return;
+      _cache.remove(victim)?.dispose();
+    }
+  }
+
   void _openId(
     String? id,
     String title, {
@@ -239,8 +258,11 @@ class _NgMainPageState extends State<_NgMainContent>
             );
           }
           if (identical(_chat, chat)) _sessions?.currentId = stored;
-          // Move into the cache under the new stored id.
+          // Move into the cache under the new stored id. A chat parked under
+          // a draft key while its first send was still creating the session
+          // must not stay reachable through that stale key.
           if (stored.isNotEmpty) {
+            _cache.removeWhere((_, value) => identical(value, chat));
             _cache[_cacheKey(stored, sessionProfile)] = chat;
           }
           unawaited(_sessions?.refresh());
@@ -269,12 +291,14 @@ class _NgMainPageState extends State<_NgMainContent>
       final oldId = old.storedId;
       if (oldId != null && oldId.isNotEmpty) {
         _cache[_cacheKey(oldId, old.sessionProfile)] = old;
-        // Evict oldest parked controllers beyond the limit.
-        while (_cache.length > _maxCached) {
-          final evictKey = _cache.keys.first;
-          final evicted = _cache.remove(evictKey);
-          evicted?.dispose();
-        }
+        _evictParked();
+      } else if (old.running) {
+        // A brand-new chat still creating its session (or waiting on the
+        // first reply) has no stored id yet. Disposing it here would set
+        // `_disposed` mid-send and drop the message, so park it under a
+        // draft key; `onCreated` later moves it to the real id.
+        _cache['draft\u0000${_draftSeq++}'] = old;
+        _evictParked();
       } else {
         old.dispose();
       }

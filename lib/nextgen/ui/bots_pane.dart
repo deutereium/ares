@@ -285,7 +285,13 @@ class _BotRow extends StatelessWidget {
       trailing: IconButton(
         key: Key('ng-bot-manage-${bot.name}'),
         tooltip: ngL.edit,
-        icon: Icon(Icons.more_vert, size: 20, color: c.text3),
+        icon: Icon(Icons.more_vert, size: 18, color: c.text3),
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 28, height: 32),
+        style: IconButton.styleFrom(
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
         onPressed: onManage,
       ),
     );
@@ -337,7 +343,13 @@ class _GroupRow extends StatelessWidget {
       trailing: IconButton(
         key: Key('ng-group-manage-${group.id}'),
         tooltip: ngL.ng_rename,
-        icon: Icon(Icons.more_vert, size: 20, color: c.text3),
+        icon: Icon(Icons.more_vert, size: 18, color: c.text3),
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 28, height: 32),
+        style: IconButton.styleFrom(
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
         onPressed: onManage,
       ),
     );

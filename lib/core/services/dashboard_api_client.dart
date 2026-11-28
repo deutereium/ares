@@ -197,6 +197,15 @@ class DashboardSessionWrites {
   };
 }
 
+/// One row of the gateway's authenticated `GET /api/profiles`: the profile
+/// name and the description the server (or the user) gave it.
+class ProfileSummary {
+  const ProfileSummary({required this.name, this.description = ''});
+
+  final String name;
+  final String description;
+}
+
 /// The classic [ApiClient] backed by the dashboard. Built by
 /// [ApiClient.forConnection] for single-login connections.
 class DashboardApiClient extends ApiClient {
@@ -253,7 +262,13 @@ class DashboardApiClient extends ApiClient {
   /// Profile names of a multiplexed gateway, from the authenticated
   /// `GET /api/profiles`. A gated gateway leaves them out of the unauthenticated
   /// status probe, so this is the only place to learn them after signing in.
-  Future<List<String>> listProfiles() async {
+  Future<List<String>> listProfiles() async => [
+    for (final profile in await listProfileSummaries()) profile.name,
+  ];
+
+  /// The same listing with each profile's description, for pickers that show
+  /// what a profile is for.
+  Future<List<ProfileSummary>> listProfileSummaries() async {
     final res = await dashboard.apiRequest('GET', 'profiles');
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw DashboardRequestException(
@@ -266,7 +281,10 @@ class DashboardApiClient extends ApiClient {
     return [
       for (final p in list)
         if (p is Map && p['name'] is String && (p['name'] as String).isNotEmpty)
-          p['name'] as String,
+          ProfileSummary(
+            name: p['name'] as String,
+            description: p['description']?.toString().trim() ?? '',
+          ),
     ];
   }
 

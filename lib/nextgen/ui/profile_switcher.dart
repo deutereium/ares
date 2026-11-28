@@ -96,6 +96,43 @@ Future<void> warmNgProfiles(NgScope scope) async {
   } catch (_) {}
 }
 
+const _profileDescriptionTtl = Duration(minutes: 5);
+
+class _CachedProfileDescriptions {
+  _CachedProfileDescriptions(this.descriptions, this.fetchedAt);
+  final Map<String, String> descriptions;
+  final DateTime fetchedAt;
+}
+
+final Map<String, _CachedProfileDescriptions> _profileDescriptionCache = {};
+
+/// Profile descriptions change even less often than the name list. Keep the
+/// last answer per gateway so a picker can show what each profile is for
+/// without blocking on a round trip.
+Future<Map<String, String>> ngProfileDescriptions(NgScope scope) async {
+  final key = _profileCacheKey(scope);
+  final hit = _profileDescriptionCache[key];
+  if (hit != null &&
+      DateTime.now().difference(hit.fetchedAt) < _profileDescriptionTtl) {
+    return hit.descriptions;
+  }
+  try {
+    final rows = await scope.gateway.api.listProfileSummaries();
+    final descriptions = {
+      for (final row in rows)
+        if (row.description.trim().isNotEmpty)
+          row.name: row.description.trim(),
+    };
+    _profileDescriptionCache[key] = _CachedProfileDescriptions(
+      descriptions,
+      DateTime.now(),
+    );
+    return descriptions;
+  } catch (_) {
+    return hit?.descriptions ?? const {};
+  }
+}
+
 class _ProfileChoice {
   const _ProfileChoice(this.name);
   final String? name;
@@ -131,10 +168,111 @@ Future<({String? profile})?> showNgNewChatProfilePicker(
       .toList(growable: false);
   if (others.isEmpty) return (profile: null);
 
+  final descriptions = ngProfileDescriptions(scope);
   final chosen = await showNgSheet<String>(
     context,
     builder: (ctx) {
       final c = NgColors.of(ctx);
+      Widget card({
+        required String key,
+        required String label,
+        required String description,
+        required IconData icon,
+        required bool selected,
+        required VoidCallback onTap,
+      }) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Material(
+          color: selected ? c.accentSoft : c.surface,
+          borderRadius: BorderRadius.circular(NgRadii.md),
+          child: InkWell(
+            key: Key(key),
+            borderRadius: BorderRadius.circular(NgRadii.md),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: selected ? c.accent : c.well,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 20,
+                      color: selected ? c.onAccent : c.accentText,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: NgType.label.copyWith(
+                                  color: c.text,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (selected) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: c.accent,
+                                  borderRadius: BorderRadius.circular(
+                                    NgRadii.full,
+                                  ),
+                                ),
+                                child: Text(
+                                  'Current',
+                                  style: NgType.caption.copyWith(
+                                    color: c.onAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          description.isEmpty
+                              ? 'No description yet.'
+                              : description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: NgType.caption.copyWith(color: c.text3),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.chevron_right,
+                    size: selected ? 20 : 18,
+                    color: selected ? c.accent : c.text3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
       return ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(ctx).size.height * 0.72,
@@ -143,38 +281,73 @@ Future<({String? profile})?> showNgNewChatProfilePicker(
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  ngL.ng_new_chat,
-                  style: NgType.heading.copyWith(color: c.text),
-                ),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: c.accentSoft,
+                      borderRadius: BorderRadius.circular(NgRadii.md),
+                    ),
+                    child: Icon(
+                      Icons.add_comment_outlined,
+                      size: 20,
+                      color: c.accentText,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ngL.ng_new_chat,
+                          style: NgType.heading.copyWith(color: c.text),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          ngL.ng_profiles,
+                          style: NgType.caption.copyWith(color: c.text3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  ListTile(
-                    key: const Key('ng-new-chat-profile-own'),
-                    leading: Icon(Icons.dns_outlined, color: c.accentText),
-                    title: Text(
-                      ngProfileLabel(current),
-                      style: TextStyle(color: c.text),
-                    ),
-                    selected: true,
-                    trailing: Icon(Icons.check, color: c.accent),
-                    onTap: () => Navigator.of(ctx).pop(_ownProfile),
-                  ),
-                  for (final name in others)
-                    ListTile(
-                      key: Key('ng-new-chat-profile-$name'),
-                      leading: Icon(Icons.person_outline, color: c.accentText),
-                      title: Text(name, style: TextStyle(color: c.text)),
-                      onTap: () => Navigator.of(ctx).pop(name),
-                    ),
-                ],
+              child: FutureBuilder<Map<String, String>>(
+                future: descriptions,
+                builder: (ctx, snapshot) {
+                  final found = snapshot.data ?? const <String, String>{};
+                  final ownDescription =
+                      found[current] ?? found[ownName] ?? '';
+                  return ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    children: [
+                      card(
+                        key: 'ng-new-chat-profile-own',
+                        label: ngProfileLabel(current),
+                        description: ownDescription,
+                        icon: Icons.dns_outlined,
+                        selected: true,
+                        onTap: () => Navigator.of(ctx).pop(_ownProfile),
+                      ),
+                      for (final name in others)
+                        card(
+                          key: 'ng-new-chat-profile-$name',
+                          label: name,
+                          description: found[name] ?? '',
+                          icon: Icons.person_outline,
+                          selected: false,
+                          onTap: () => Navigator.of(ctx).pop(name),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 8),

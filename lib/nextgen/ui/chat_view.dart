@@ -2128,6 +2128,44 @@ class _DisclosureState extends State<_Disclosure>
     value: widget.open ? 1 : 0,
   );
 
+  /// The transcript is reversed, so shrinking a row moves its top (the label)
+  /// down while its bottom stays put. Remember where the label was and shift
+  /// the scroll by the same amount each frame, keeping the label still while
+  /// the body collapses upward from the bottom.
+  final GlobalKey _headerKey = GlobalKey();
+  double? _anchorY;
+
+  @override
+  void initState() {
+    super.initState();
+    _size.addListener(_keepHeaderStill);
+  }
+
+  double? _headerY() {
+    final box = _headerKey.currentContext?.findRenderObject();
+    return box is RenderBox && box.hasSize
+        ? box.localToGlobal(Offset.zero).dy
+        : null;
+  }
+
+  void _keepHeaderStill() {
+    final anchor = _anchorY;
+    if (anchor == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final y = _headerY();
+      final position = Scrollable.maybeOf(context)?.position;
+      if (y == null || position == null || !position.hasPixels) return;
+      final delta = y - anchor;
+      if (delta.abs() < 0.5) return;
+      final target = (position.pixels - delta).clamp(
+        0.0,
+        position.maxScrollExtent,
+      );
+      if ((target - position.pixels).abs() > 0.01) position.jumpTo(target);
+    });
+  }
+
   @override
   void didUpdateWidget(covariant _Disclosure oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -2136,6 +2174,7 @@ class _DisclosureState extends State<_Disclosure>
       return;
     }
     if (widget.open != oldWidget.open) {
+      _anchorY = _headerY();
       if (widget.open) {
         _size.forward();
       } else {
@@ -2151,6 +2190,7 @@ class _DisclosureState extends State<_Disclosure>
   }
 
   void _toggle() {
+    _anchorY = _headerY();
     widget.onTap();
     // A shrink can leave the reversed transcript scrolled past its new end;
     // clamp it so the bottom cannot stay blank until the next scroll.
@@ -2191,6 +2231,7 @@ class _DisclosureState extends State<_Disclosure>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
+            key: _headerKey,
             borderRadius: BorderRadius.circular(NgRadii.sm),
             onTap: _toggle,
             child: Padding(

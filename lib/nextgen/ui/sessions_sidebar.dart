@@ -78,7 +78,7 @@ class NgSessionsModel extends ChangeNotifier {
       sessions = [
         for (final row in rows)
           if (row is Map) Session.fromJson(row.cast<String, dynamic>()),
-      ];
+      ]..sort((a, b) => _recency(b).compareTo(_recency(a)));
       // Preserve whether the cached rows were merged across profiles: a
       // single-profile cache must keep falling back to the connection's own
       // profile for labels and per-chat API routing.
@@ -96,7 +96,11 @@ class NgSessionsModel extends ChangeNotifier {
         'aggregated': _aggregated,
         'profiles': profiles,
         'sessions': [
-          for (final s in sessions.take(_cacheLimit)) s.toJson(),
+          for (final s
+              in ([...sessions]
+                    ..sort((a, b) => _recency(b).compareTo(_recency(a))))
+                  .take(_cacheLimit))
+            s.toJson(),
         ],
       };
       unawaited(
@@ -521,7 +525,8 @@ class NgSessionsModel extends ChangeNotifier {
       excludeSources: browsingCrons ? null : kChatListingExcludedSources,
     );
     if (generation != _generation) return;
-    sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
+    sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList()
+      ..sort((a, b) => _recency(b).compareTo(_recency(a)));
     _aggregated = true;
     _serverOffset = page.sessions.length;
     hasMore = page.hasMore;
@@ -585,7 +590,8 @@ class NgSessionsModel extends ChangeNotifier {
       // Search is one server-side read; it does not page.
       final page = await api.getSessionsPage(limit: _pageSize, title: query);
       if (generation != _generation) return;
-      sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
+      sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList()
+        ..sort((a, b) => _recency(b).compareTo(_recency(a)));
       _serverOffset = 0;
       hasMore = false;
       return;
@@ -626,7 +632,7 @@ class NgSessionsModel extends ChangeNotifier {
       if (visible >= _targetChats) break;
     }
     if (generation != _generation) return;
-    sessions = collected;
+    sessions = collected..sort((a, b) => _recency(b).compareTo(_recency(a)));
     _serverOffset = offset;
     hasMore = more;
   }
@@ -653,7 +659,7 @@ class NgSessionsModel extends ChangeNotifier {
           ...sessions,
           for (final session in page.sessions)
             if (!session.isUntitledCronShell && known.add(session.id)) session,
-        ];
+        ]..sort((a, b) => _recency(b).compareTo(_recency(a)));
         hasMore = page.sessions.isNotEmpty && page.hasMore;
         return;
       }
@@ -675,7 +681,8 @@ class NgSessionsModel extends ChangeNotifier {
             addedVisible++;
           }
         }
-        sessions = [...collected];
+        sessions = [...collected]
+          ..sort((a, b) => _recency(b).compareTo(_recency(a)));
         hasMore = page.sessions.isNotEmpty && page.hasMore;
         if (!hasMore || addedVisible >= _targetChats) break;
       }
@@ -1320,7 +1327,13 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                         left: 0,
                         right: 0,
                         bottom: 12,
-                        child: Center(child: _newChatPill(c)),
+                        child: Align(
+                          alignment: const Alignment(0.28, 1),
+                          child: Transform.scale(
+                            scale: 0.8,
+                            child: _newChatPill(c),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1778,79 +1791,220 @@ class NgDestinationsSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
-    Widget row(IconData icon, String label, NgDestination d) => Padding(
+    final scope = NgScope.of(context);
+    return Drawer(
+      backgroundColor: c.sidebar,
+      width: 320,
+      shape: const RoundedRectangleBorder(),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: c.accentSoft,
+                      borderRadius: BorderRadius.circular(NgRadii.md),
+                    ),
+                    child: Icon(
+                      Icons.grid_view_rounded,
+                      size: 21,
+                      color: c.accentText,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ngL.ng_destinations,
+                          style: NgType.heading.copyWith(color: c.text),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          scope.gateway.url.display,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: NgType.caption.copyWith(color: c.text3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _DestinationSection(
+              label: 'Workspace',
+              children: [
+                _DestinationRow(
+                  icon: Icons.schedule,
+                  title: ngL.ng_scheduled,
+                  subtitle: 'Cron jobs and one-off runs',
+                  destination: NgDestination.scheduled,
+                  onDestination: onDestination,
+                ),
+                _DestinationRow(
+                  icon: Icons.view_kanban_outlined,
+                  title: ngL.ng_kanban,
+                  subtitle: 'Tasks, boards and progress',
+                  destination: NgDestination.kanban,
+                  onDestination: onDestination,
+                ),
+                _DestinationRow(
+                  icon: Icons.insights_outlined,
+                  title: ngL.ng_insights,
+                  subtitle: 'Usage and activity',
+                  destination: NgDestination.insights,
+                  onDestination: onDestination,
+                ),
+              ],
+            ),
+            _DestinationSection(
+              label: 'Library',
+              children: [
+                _DestinationRow(
+                  icon: Icons.archive_outlined,
+                  title: ngL.ng_archived,
+                  subtitle: 'Chats you put away',
+                  destination: NgDestination.archived,
+                  onDestination: onDestination,
+                ),
+                _DestinationRow(
+                  icon: Icons.extension_outlined,
+                  title: ngL.ng_capabilities,
+                  subtitle: 'Tools, skills and plugins',
+                  destination: NgDestination.capabilities,
+                  onDestination: onDestination,
+                ),
+              ],
+            ),
+            _DestinationSection(
+              label: 'App',
+              children: [
+                _DestinationRow(
+                  icon: Icons.apps,
+                  title: ngL.ng_more,
+                  subtitle: 'Every other surface',
+                  destination: NgDestination.more,
+                  onDestination: onDestination,
+                ),
+                _DestinationRow(
+                  icon: Icons.settings_outlined,
+                  title: ngL.ng_settings,
+                  subtitle: 'Connection and appearance',
+                  destination: NgDestination.settings,
+                  onDestination: onDestination,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationSection extends StatelessWidget {
+  const _DestinationSection({required this.label, required this.children});
+
+  final String label;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 14, 6, 8),
+          child: Text(
+            label.toUpperCase(),
+            style: NgType.eyebrow.copyWith(color: c.text3),
+          ),
+        ),
+        ...children,
+        const SizedBox(height: 2),
+      ],
+    );
+  }
+}
+
+class _DestinationRow extends StatelessWidget {
+  const _DestinationRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.destination,
+    required this.onDestination,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final NgDestination destination;
+  final ValueChanged<NgDestination> onDestination;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
         color: c.surface,
         borderRadius: BorderRadius.circular(NgRadii.md),
         child: InkWell(
-          key: Key('ng-destination-${d.name}'),
+          key: Key('ng-destination-${destination.name}'),
           borderRadius: BorderRadius.circular(NgRadii.md),
-          onTap: () => onDestination(d),
+          onTap: () => onDestination(destination),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: c.accentText),
-                const SizedBox(width: 14),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: c.well,
+                    borderRadius: BorderRadius.circular(NgRadii.sm),
+                  ),
+                  child: Icon(icon, size: 19, color: c.accentText),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: NgType.label.copyWith(color: c.text),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: NgType.label.copyWith(
+                          color: c.text,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: NgType.caption.copyWith(color: c.text3),
+                      ),
+                    ],
                   ),
                 ),
-                Icon(Icons.chevron_right, size: 18, color: c.text3),
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right, size: 18, color: c.textMuted),
               ],
             ),
           ),
-        ),
-      ),
-    );
-    return Drawer(
-      backgroundColor: c.sidebar,
-      width: 300,
-      shape: const RoundedRectangleBorder(),
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
-              child: Text(
-                ngL.ng_destinations,
-                style: NgType.heading.copyWith(color: c.text),
-              ),
-            ),
-            row(Icons.schedule, ngL.ng_scheduled, NgDestination.scheduled),
-            row(
-              Icons.view_kanban_outlined,
-              ngL.ng_kanban,
-              NgDestination.kanban,
-            ),
-            row(
-              Icons.insights_outlined,
-              ngL.ng_insights,
-              NgDestination.insights,
-            ),
-            row(
-              Icons.archive_outlined,
-              ngL.ng_archived,
-              NgDestination.archived,
-            ),
-            row(
-              Icons.extension_outlined,
-              ngL.ng_capabilities,
-              NgDestination.capabilities,
-            ),
-            row(Icons.apps, ngL.ng_more, NgDestination.more),
-            row(
-              Icons.settings_outlined,
-              ngL.ng_settings,
-              NgDestination.settings,
-            ),
-          ],
         ),
       ),
     );

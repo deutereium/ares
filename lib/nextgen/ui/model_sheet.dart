@@ -1,5 +1,8 @@
 // Model and thinking-level picker (Kyllene's model sheet): thinking levels,
 // search, starred and recent models, then every configured provider.
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../data/chat_controller.dart';
@@ -9,6 +12,29 @@ import 'models_page.dart';
 import 'nextgen_scope.dart';
 import 'widgets.dart';
 import '../nextgen_l10n.dart';
+
+/// The gateway's model inventory changes rarely, so keep the last answer on
+/// disk: the sheet shows the previous list while it refreshes. `prefs` is
+/// already an in-memory cache, so reads are synchronous.
+String _modelOptionsKey(NgScope scope) =>
+    'nextgen_model_options.${scope.connection.id}.'
+    '${scope.gateway.url.display}';
+
+Map<String, dynamic>? _cachedModelOptions(NgScope scope) {
+  final raw = scope.prefs.getString(_modelOptionsKey(scope));
+  if (raw == null || raw.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) return decoded;
+  } catch (_) {
+    // A corrupt cache is only a missing cache; the fetch replaces it.
+  }
+  return null;
+}
+
+void _rememberModelOptions(NgScope scope, Map<String, dynamic> data) {
+  unawaited(scope.prefs.setString(_modelOptionsKey(scope), jsonEncode(data)));
+}
 
 /// Reasoning levels, weakest first, as `config.set reasoning` takes them.
 List<(String, String)> get ngEfforts => [
@@ -103,6 +129,7 @@ class _ModelSheetState extends State<_ModelSheet> {
   String _query = '';
   String? _providerFilter;
   bool _switching = false;
+  bool _readCache = false;
 
   @override
   void initState() {
@@ -110,14 +137,27 @@ class _ModelSheetState extends State<_ModelSheet> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_readCache) return;
+    _readCache = true;
+    final cached = _cachedModelOptions(NgScope.of(context));
+    if (cached != null) _providers = parseModelOptions(cached);
+  }
+
   Future<void> _load() async {
+    final scope = NgScope.of(context);
     try {
-      final data = await NgScope.of(
-        context,
-      ).gateway.dashboard.getModelOptions();
-      if (mounted) setState(() => _providers = parseModelOptions(data));
+      final data = await scope.gateway.dashboard.getModelOptions();
+      if (!mounted) return;
+      _rememberModelOptions(scope, data);
+      setState(() {
+        _providers = parseModelOptions(data);
+        _error = null;
+      });
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted && _providers == null) setState(() => _error = '$e');
     }
   }
 
