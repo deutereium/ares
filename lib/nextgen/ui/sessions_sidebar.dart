@@ -1317,7 +1317,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
         isDense: true,
         filled: true,
         fillColor: c.input,
-        contentPadding: expanded ? null : const EdgeInsets.zero,
+        contentPadding: expanded ? null : EdgeInsets.zero,
         prefixIcon: Icon(Icons.search, color: c.text3, size: 20),
         // Keep the collapsed circle the same height as the expanded field so
         // the header does not move the chat list when it opens.
