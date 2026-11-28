@@ -2307,8 +2307,10 @@ class NgChatController extends ChangeNotifier {
               else
                 'reasoning_effort': pickedEffort,
             // A bot chat is the canonical hidden "Bot Chat" on the bot's own
-            // profile, adopting that profile's model and tools.
-            if (sessionProfile != null) ...{
+            // profile, adopting that profile's model and tools. A normal chat
+            // the user started on another profile is still a visible session:
+            // marking it hidden titled "Bot Chat" moved it to the Bots tab.
+            if (identity?.isBot == true) ...{
               'title': 'Bot Chat',
               'hidden': true,
               'follow_profile_config': true,

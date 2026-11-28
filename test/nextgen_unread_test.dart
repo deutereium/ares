@@ -390,6 +390,9 @@ void main() {
     expect(api.calls, hasLength(1));
     api.complete(0, [_row('ordinary', 1000, title: 'Ordinary chat')]);
     await tester.pump();
+    // The refresh continuation lands after the first frame; give the list one
+    // more frame to paint the row it just received.
+    await tester.pump();
     expect(find.text('Ordinary chat'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());

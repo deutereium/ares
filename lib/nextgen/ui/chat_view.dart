@@ -2092,7 +2092,7 @@ class _ActionIcon extends StatelessWidget {
   }
 }
 
-class _Disclosure extends StatelessWidget {
+class _Disclosure extends StatefulWidget {
   const _Disclosure({
     required this.icon,
     required this.label,
@@ -2111,23 +2111,75 @@ class _Disclosure extends StatelessWidget {
   final VoidCallback onTap;
   final Widget child;
 
-  Widget _body(NgColors c, bool open) => open
-      ? Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(NgRadii.md),
-            border: Border.all(color: c.stroke),
-          ),
-          child: child,
-        )
-      : const SizedBox(width: double.infinity);
+  @override
+  State<_Disclosure> createState() => _DisclosureState();
+}
+
+class _DisclosureState extends State<_Disclosure>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _size = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+    value: widget.open ? 1 : 0,
+  );
+
+  @override
+  void didUpdateWidget(covariant _Disclosure oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.animate) {
+      _size.value = widget.open ? 1 : 0;
+      return;
+    }
+    if (widget.open != oldWidget.open) {
+      if (widget.open) {
+        _size.forward();
+      } else {
+        _size.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _size.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    widget.onTap();
+    // A shrink can leave the reversed transcript scrolled past its new end;
+    // clamp it so the bottom cannot stay blank until the next scroll.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final position = Scrollable.maybeOf(context)?.position;
+      if (position == null || !position.hasPixels) return;
+      final max = position.maxScrollExtent;
+      if (position.pixels > max) position.jumpTo(max);
+    });
+  }
+
+  Widget _body(NgColors c) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 4),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: c.surface,
+      borderRadius: BorderRadius.circular(NgRadii.md),
+      border: Border.all(color: c.stroke),
+    ),
+    child: widget.child,
+  );
 
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
+    // Keep the real content laid out while it collapses and clip it away,
+    // instead of swapping in an empty box: a tall thought/tool run would
+    // otherwise show a huge blank area at the bottom of the transcript.
+    final showBody = widget.animate
+        ? widget.open || !_size.isDismissed
+        : widget.open;
+    final body = showBody ? _body(c) : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -2135,13 +2187,13 @@ class _Disclosure extends StatelessWidget {
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(NgRadii.sm),
-            onTap: onTap,
+            onTap: _toggle,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (busy)
+                  if (widget.busy)
                     SizedBox(
                       width: 14,
                       height: 14,
@@ -2151,18 +2203,18 @@ class _Disclosure extends StatelessWidget {
                       ),
                     )
                   else
-                    Icon(icon, size: 16, color: c.text3),
+                    Icon(widget.icon, size: 16, color: c.text3),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      label,
+                      widget.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: NgType.label.copyWith(color: c.text3),
                     ),
                   ),
                   AnimatedRotation(
-                    turns: open ? 0.5 : 0,
+                    turns: widget.open ? 0.5 : 0,
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeInOutCubic,
                     child: Icon(
@@ -2175,15 +2227,25 @@ class _Disclosure extends StatelessWidget {
               ),
             ),
           ),
-          if (animate)
-            AnimatedSize(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeInOutCubic,
-              alignment: Alignment.topLeft,
-              child: _body(c, open),
+          if (widget.animate)
+            AnimatedBuilder(
+              animation: _size,
+              child: body,
+              builder: (context, child) {
+                if (_size.isDismissed || child == null) {
+                  return const SizedBox(width: double.infinity);
+                }
+                return ClipRect(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    heightFactor: Curves.easeInOutCubic.transform(_size.value),
+                    child: child,
+                  ),
+                );
+              },
             )
           else
-            _body(c, open),
+            body ?? const SizedBox(width: double.infinity),
         ],
       ),
     );

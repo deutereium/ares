@@ -201,7 +201,9 @@ class _NgMainPageState extends State<_NgMainContent>
     // chat on another profile is a different chat from an ordinary one with
     // the same stored id, so the profile is part of the key.
     final cacheKey = id == null ? null : _cacheKey(id, sessionProfile);
-    _bots?.setActiveBot(sessionProfile);
+    // Only a bot chat is a bot; a normal chat on another profile must not
+    // clear that bot's unread mark or otherwise register as the active bot.
+    _bots?.setActiveBot(identity?.isBot == true ? sessionProfile : null);
     NgChatController? cached;
     if (cacheKey != null && _cache.containsKey(cacheKey)) {
       cached = _cache.remove(cacheKey);
@@ -221,8 +223,8 @@ class _NgMainPageState extends State<_NgMainContent>
         title: title,
         workingDirectory: workingDirectory,
         onCreated: (stored) {
-          // The saved last session is the connection's own chat. A bot chat
-          // lives on another profile and must never restore there.
+          // The saved last session is the connection's own chat. A chat on
+          // another profile must never restore there.
           if (sessionProfile == null) {
             unawaited(
               NextGenPreferences.setLastSession(
@@ -281,7 +283,8 @@ class _NgMainPageState extends State<_NgMainContent>
       unawaited(chat.open());
     }
     // Only an ordinary chat belongs on the connection's own profile when the
-    // app reopens; restoring a bot's stored id there yields "session not found".
+    // app reopens; restoring another profile's stored id there yields
+    // "session not found".
     if (sessionProfile == null) {
       unawaited(
         NextGenPreferences.setLastSession(scope.prefs, scope.connection.id, id),

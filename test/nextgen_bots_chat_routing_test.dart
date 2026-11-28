@@ -224,6 +224,39 @@ void main() {
         'work-bot',
       );
     });
+
+    test('a new chat on another profile stays a visible ordinary chat', () async {
+      final gateway = _RoutingGateway();
+      gateway.onCall = (method, params) async {
+        if (method == 'session.create') {
+          return {
+            'session_id': 'rt-plain',
+            'stored_session_id': 'stored-plain',
+          };
+        }
+        if (method == 'prompt.submit') return {'status': 'started'};
+        return const {};
+      };
+      final chat = NgChatController(
+        gateway,
+        sessionProfile: 'work',
+      );
+      addTearDown(() {
+        chat.dispose();
+        gateway.dispose();
+      });
+
+      expect(await chat.send('hello'), isTrue);
+      final create = gateway.callsTo('session.create').single.params;
+      expect(create['profile'], 'work');
+      expect(create.containsKey('title'), isFalse);
+      expect(create.containsKey('hidden'), isFalse);
+      expect(create.containsKey('follow_profile_config'), isFalse);
+      expect(
+        gateway.callsTo('prompt.submit').single.params['profile'],
+        'work',
+      );
+    });
   });
 
   group('sidebar tab', () {
