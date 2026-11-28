@@ -506,7 +506,8 @@ class NgSessionsModel extends ChangeNotifier {
               session.profile == null
                   ? session.withProfile(page.profile)
                   : session,
-      ]..sort((a, b) => _recency(b).compareTo(_recency(a)));
+      ];
+      sessions = collected;
       sessions = collected;
       _aggregated = true;
       _serverOffset = 0;
@@ -525,8 +526,7 @@ class NgSessionsModel extends ChangeNotifier {
       excludeSources: browsingCrons ? null : kChatListingExcludedSources,
     );
     if (generation != _generation) return;
-    sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList()
-      ..sort((a, b) => _recency(b).compareTo(_recency(a)));
+    sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
     _aggregated = true;
     _serverOffset = page.sessions.length;
     hasMore = page.hasMore;
@@ -590,8 +590,7 @@ class NgSessionsModel extends ChangeNotifier {
       // Search is one server-side read; it does not page.
       final page = await api.getSessionsPage(limit: _pageSize, title: query);
       if (generation != _generation) return;
-      sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList()
-        ..sort((a, b) => _recency(b).compareTo(_recency(a)));
+      sessions = page.sessions.where((s) => !s.isUntitledCronShell).toList();
       _serverOffset = 0;
       hasMore = false;
       return;
@@ -632,7 +631,7 @@ class NgSessionsModel extends ChangeNotifier {
       if (visible >= _targetChats) break;
     }
     if (generation != _generation) return;
-    sessions = collected..sort((a, b) => _recency(b).compareTo(_recency(a)));
+    sessions = collected;
     _serverOffset = offset;
     hasMore = more;
   }
@@ -659,7 +658,7 @@ class NgSessionsModel extends ChangeNotifier {
           ...sessions,
           for (final session in page.sessions)
             if (!session.isUntitledCronShell && known.add(session.id)) session,
-        ]..sort((a, b) => _recency(b).compareTo(_recency(a)));
+        ];
         hasMore = page.sessions.isNotEmpty && page.hasMore;
         return;
       }
@@ -681,8 +680,7 @@ class NgSessionsModel extends ChangeNotifier {
             addedVisible++;
           }
         }
-        sessions = [...collected]
-          ..sort((a, b) => _recency(b).compareTo(_recency(a)));
+        sessions = [...collected];
         hasMore = page.sessions.isNotEmpty && page.hasMore;
         if (!hasMore || addedVisible >= _targetChats) break;
       }
