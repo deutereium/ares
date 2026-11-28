@@ -7,10 +7,10 @@ import 'package:hermes_android/core/services/projects_gateway_client.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/services/ws_client.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/hermes_shell.dart';
 import 'package:hermes_android/core/widgets/projects_pane.dart';
 import 'package:hermes_android/core/widgets/space_migration_preview.dart';
+import 'package:hermes_android/nextgen/ui/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hermes_android/l10n/app_localizations.dart';
 
@@ -198,13 +198,13 @@ void main() {
     await _pumpPane(tester, repository);
     await tester.pump();
 
-    expect(find.byType(LoadingSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('Hermes Android'), findsNothing);
 
     gateway.gate!.complete();
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoadingSkeleton), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Hermes Android'), findsOneWidget);
   });
 
@@ -223,7 +223,7 @@ void main() {
 
     expect(find.text('Hermes Android'), findsOneWidget);
     expect(find.text('ScriptHive'), findsOneWidget);
-    expect(find.byType(HermesCard), findsNWidgets(2));
+    expect(find.byType(NgCard), findsNWidgets(2));
   });
 
   testWidgets('shows authoritative chat counts on project cards', (
@@ -490,7 +490,7 @@ void main() {
     await _pumpPane(tester, repository);
     await tester.pumpAndSettle();
 
-    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byType(NgEmpty), findsOneWidget);
     expect(find.text('No projects yet'), findsOneWidget);
 
     await tester.tap(find.text('Create a project'));
@@ -540,7 +540,7 @@ void main() {
 
     // Labelled, not a dead end: the local grouping is still listed.
     expect(find.text('Compatibility mode'), findsOneWidget);
-    expect(find.byType(ErrorState), findsNothing);
+    expect(find.byType(NgEmpty), findsNothing);
     expect(find.text('Retry'), findsNothing);
     expect(find.text('Hermes Android'), findsOneWidget);
     expect(find.textContaining('1 chat'), findsOneWidget);
@@ -582,7 +582,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Compatibility mode'), findsOneWidget);
-    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byType(NgEmpty), findsOneWidget);
     expect(find.textContaining('Update Hermes'), findsOneWidget);
   });
 

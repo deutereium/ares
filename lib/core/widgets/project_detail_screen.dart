@@ -28,7 +28,8 @@ import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
 import '../utils/project_session_filter.dart';
 import '../utils/relative_time.dart';
-import 'hermes_components.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 
 import 'package:hermes_android/core/l10n/l10n.dart';
 
@@ -393,6 +394,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = NgColors.of(context);
     final view = _view;
     final title = _projectName;
     final hasActions =
@@ -400,79 +402,65 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         widget.onArchiveProject != null ||
         widget.onDeleteProject != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [
-          if (hasActions)
-            if (_deleting || _managing)
-              const Padding(
-                padding: EdgeInsets.all(HermesSpacing.md),
-                child: SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            else
-              PopupMenuButton<String>(
-                tooltip: context.l10n.project_actions,
-                onSelected: (action) {
-                  switch (action) {
-                    case 'rename':
-                      _renameProject();
-                    case 'archive':
-                      _confirmArchive();
-                    case 'delete':
-                      _confirmDelete();
-                  }
-                },
-                itemBuilder: (context) => [
-                  if (widget.onRenameProject != null)
-                    PopupMenuItem<String>(
-                      value: 'rename',
-                      child: Text(context.l10n.rename_project),
-                    ),
-                  if (widget.onArchiveProject != null)
-                    PopupMenuItem<String>(
-                      value: 'archive',
-                      child: Text(context.l10n.archive_project),
-                    ),
-                  if (widget.onDeleteProject != null)
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
+    return NgPage(
+      title: title,
+      actions: [
+        if (hasActions)
+          if (_deleting || _managing)
+            const Padding(
+              padding: EdgeInsets.all(HermesSpacing.md),
+              child: SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            PopupMenuButton<String>(
+              tooltip: context.l10n.project_actions,
+              onSelected: (action) {
+                switch (action) {
+                  case 'rename':
+                    _renameProject();
+                  case 'archive':
+                    _confirmArchive();
+                  case 'delete':
+                    _confirmDelete();
+                }
+              },
+              itemBuilder: (context) => [
+                if (widget.onRenameProject != null)
+                  PopupMenuItem<String>(
+                    value: 'rename',
+                    child: Text(context.l10n.rename_project),
+                  ),
+                if (widget.onArchiveProject != null)
+                  PopupMenuItem<String>(
+                    value: 'archive',
+                    child: Text(context.l10n.archive_project),
+                  ),
+                if (widget.onDeleteProject != null)
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: HermesSpacing.sm),
+                        Text(
+                          context.l10n.delete_project,
+                          style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
-                          const SizedBox(width: HermesSpacing.sm),
-                          Text(
-                            context.l10n.delete_project,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: [
-            Tab(text: context.l10n.chats),
-            Tab(text: context.l10n.overview),
-            Tab(text: context.l10n.files),
-            Tab(text: context.l10n.assets),
-            Tab(text: context.l10n.activity),
-          ],
-          isScrollable: true,
-        ),
-      ),
-      body: _buildBody(view),
-      floatingActionButton: widget.onNewChat == null
+                  ),
+              ],
+            ),
+      ],
+      floating: widget.onNewChat == null
           ? null
           : FloatingActionButton.extended(
               key: kProjectNewChatButtonKey,
@@ -483,23 +471,42 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
               icon: const Icon(Icons.add_rounded),
               label: Text(context.l10n.new_chat_2),
             ),
+      body: Column(
+        children: [
+          TabBar(
+            controller: _tabs,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelColor: c.text,
+            unselectedLabelColor: c.text3,
+            indicatorColor: c.accent,
+            dividerColor: c.stroke,
+            tabs: [
+              Tab(text: context.l10n.chats),
+              Tab(text: context.l10n.overview),
+              Tab(text: context.l10n.files),
+              Tab(text: context.l10n.assets),
+              Tab(text: context.l10n.activity),
+            ],
+          ),
+          Expanded(child: _buildBody(view)),
+        ],
+      ),
     );
   }
 
   Widget _buildBody(ProjectSessionsView? view) {
     if (_loading || view == null) {
-      return const Padding(
-        padding: EdgeInsets.only(top: HermesSpacing.lg),
-        child: LoadingSkeleton(rows: 4),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     // An older gateway is not a crash and not an empty project: saying "no
     // chats" here would state something this gateway cannot actually know.
     if (view.support == ProjectsSupport.unsupported) {
-      return ErrorState.unsupported(
+      return NgEmpty(
+        icon: Icons.info_outline,
         title: context.l10n.project_chats_unavailable,
-        message: context
+        body: context
             .l10n
             .this_hermes_gateway_does_not_support_opening_a_project_yet,
       );
@@ -507,12 +514,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
     // Only a *first* read with nothing to show is an error screen.
     if (view.error != null && view.sessions.isEmpty && !view.isStale) {
-      return ErrorState(
+      return NgEmpty(
+        icon: Icons.error_outline,
         title: context.l10n.could_not_open_this_project,
-        message: context
+        body: context
             .l10n
             .check_that_the_gateway_is_running_and_reachable_then_try,
-        onRetry: () => _load(refresh: true),
+        action: TextButton(
+          onPressed: () => _load(refresh: true),
+          child: Text(context.l10n.retry),
+        ),
       );
     }
 
@@ -574,10 +585,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           if (sessions.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
-              child: EmptyState(
+              child: NgEmpty(
                 icon: Icons.forum_outlined,
                 title: context.l10n.no_chats_yet,
-                message: context
+                body: context
                     .l10n
                     .chats_you_start_in_this_project_will_appear_here_on,
               ),
@@ -588,10 +599,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
             // they are looking for does not exist.
             SliverFillRemaining(
               hasScrollBody: false,
-              child: EmptyState(
+              child: NgEmpty(
                 icon: Icons.search_off,
                 title: context.l10n.no_matches,
-                message: context.l10n.no_chats_in_this_project_match(
+                body: context.l10n.no_chats_in_this_project_match(
                   _searchQuery.trim(),
                 ),
               ),
@@ -627,8 +638,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   }
 
   Widget _buildOverview(ProjectSessionsView view) {
+    final c = NgColors.of(context);
     final tree = view.tree;
-    final tokens = HermesTokens.of(context);
 
     return RefreshIndicator(
       onRefresh: () => _load(refresh: true),
@@ -637,54 +648,54 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
         children: [
           if (view.isStale) const _OfflineNotice(),
-          SectionHeader(title: context.l10n.chats),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: HermesSpacing.lg),
-            child: HermesCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: NgSectionLabel(context.l10n.chats),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: NgCard(
               child: Row(
                 children: [
-                  Icon(Icons.forum_outlined, color: tokens.muted, size: 20),
-                  const SizedBox(width: HermesSpacing.md),
+                  Icon(Icons.forum_outlined, color: c.text3, size: 20),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       context.l10n.conversations_in_this_project,
-                      style: tokens.typography.body.copyWith(
-                        color: tokens.onSurface,
-                      ),
+                      style: NgType.body.copyWith(color: c.text),
                     ),
                   ),
                   Text(
                     // The server's count, not the rows we happen to hold.
                     '${tree?.sessionCount ?? view.sessions.length}',
-                    style: tokens.typography.title.copyWith(
-                      color: tokens.accent,
-                    ),
+                    style: NgType.title.copyWith(color: c.accentText),
                   ),
                 ],
               ),
             ),
           ),
           if (tree != null && tree.repos.isNotEmpty) ...[
-            SectionHeader(title: context.l10n.repositories),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: NgSectionLabel(context.l10n.repositories),
+            ),
             for (final repo in tree.repos)
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  HermesSpacing.lg,
-                  0,
-                  HermesSpacing.lg,
-                  HermesSpacing.md,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: _RepoCard(repo: repo),
               ),
           ],
           if (tree?.path != null) ...[
-            SectionHeader(title: context.l10n.location),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: HermesSpacing.lg),
-              child: HermesCard(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: NgSectionLabel(context.l10n.location),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: NgCard(
                 child: Text(
                   tree!.path!,
-                  style: tokens.typography.mono.copyWith(color: tokens.muted),
+                  style: NgType.code.copyWith(color: c.text3),
                 ),
               ),
             ),
@@ -699,7 +710,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   /// Paths come from `projects.project_sessions` (project, repos, lanes); the
   /// screen never scans local storage and never invents a tree of its own.
   Widget _buildFiles(ProjectSessionsView view) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final paths = <String>[];
     void add(String? path) {
       if (path != null && path.trim().isNotEmpty && !paths.contains(path)) {
@@ -725,40 +736,32 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           if (view.isStale) const _OfflineNotice(),
           if (paths.isEmpty)
             Padding(
-              padding: EdgeInsets.only(top: HermesSpacing.xl),
-              child: EmptyState(
+              padding: const EdgeInsets.only(top: HermesSpacing.xl),
+              child: NgEmpty(
                 icon: Icons.folder_open_outlined,
                 title: context.l10n.no_folders_yet,
-                message: context
+                body: context
                     .l10n
                     .the_server_has_not_reported_folders_for_this_project_yet,
               ),
             )
           else ...[
-            SectionHeader(title: context.l10n.folders),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: NgSectionLabel(context.l10n.folders),
+            ),
             for (final path in paths)
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  HermesSpacing.lg,
-                  0,
-                  HermesSpacing.lg,
-                  HermesSpacing.sm,
-                ),
-                child: HermesCard(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: NgCard(
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.folder_outlined,
-                        size: 18,
-                        color: tokens.muted,
-                      ),
-                      const SizedBox(width: HermesSpacing.md),
+                      Icon(Icons.folder_outlined, size: 18, color: c.text3),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           path,
-                          style: tokens.typography.mono.copyWith(
-                            color: tokens.onSurface,
-                          ),
+                          style: NgType.code.copyWith(color: c.text),
                         ),
                       ),
                     ],
@@ -781,10 +784,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         children: [
           if (view.isStale) const _OfflineNotice(),
           Padding(
-            padding: EdgeInsets.only(top: HermesSpacing.xl),
-            child: ErrorState.unsupported(
+            padding: const EdgeInsets.only(top: HermesSpacing.xl),
+            child: NgEmpty(
+              icon: Icons.info_outline,
               title: context.l10n.assets_unavailable,
-              message: context
+              body: context
                   .l10n
                   .assets_need_a_server_authoritative_assets_index_in_the_hermes,
             ),
@@ -797,7 +801,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   /// The project's own activity: every chat with its current state and when
   /// it was last active, newest first.
   Widget _buildActivity(ProjectSessionsView view) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final now = DateTime.now();
     final sessions = [...view.sessions]
       ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
@@ -811,11 +815,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           if (view.isStale) const _OfflineNotice(),
           if (sessions.isEmpty)
             Padding(
-              padding: EdgeInsets.only(top: HermesSpacing.xl),
-              child: EmptyState(
+              padding: const EdgeInsets.only(top: HermesSpacing.xl),
+              child: NgEmpty(
                 icon: Icons.bolt_outlined,
                 title: context.l10n.no_activity_yet,
-                message: context
+                body: context
                     .l10n
                     .chats_in_this_project_will_show_their_state_and_last,
               ),
@@ -823,13 +827,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           else
             for (final session in sessions)
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  HermesSpacing.lg,
-                  0,
-                  HermesSpacing.lg,
-                  HermesSpacing.sm,
-                ),
-                child: HermesCard(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: NgCard(
                   onTap: () => widget.onOpenSession?.call(session),
                   child: Row(
                     children: [
@@ -843,22 +842,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                                   : session.title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                              style: NgType.body.copyWith(color: c.text),
                             ),
-                            const SizedBox(height: HermesSpacing.xs),
+                            const SizedBox(height: 4),
                             Text(
                               formatRelativeTime(now, session.lastActive),
-                              style: tokens.typography.label.copyWith(
-                                color: tokens.muted,
-                              ),
+                              style: NgType.caption.copyWith(color: c.text3),
                             ),
                           ],
                         ),
                       ),
-                      StatusChip(
-                        status: session.isActive
-                            ? HermesStatus.running
-                            : HermesStatus.completed,
+                      const SizedBox(width: 8),
+                      _StatusPill(
                         label: session.isActive ? 'Running' : 'Done',
+                        active: session.isActive,
                       ),
                     ],
                   ),
@@ -876,26 +873,49 @@ class _OfflineNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        HermesSpacing.lg,
-        HermesSpacing.md,
-        HermesSpacing.lg,
-        0,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Row(
         children: [
-          Icon(Icons.cloud_off_outlined, size: 16, color: tokens.warning),
-          const SizedBox(width: HermesSpacing.sm),
+          Icon(Icons.cloud_off_outlined, size: 16, color: c.warning),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               context.l10n.offline_showing_the_last_known_chats,
-              style: tokens.typography.label.copyWith(color: tokens.warning),
+              style: NgType.caption.copyWith(color: c.warning),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final bool active;
+
+  const _StatusPill({required this.label, required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    final color = active ? c.success : c.text3;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(NgRadii.sm),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: NgType.caption.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -917,11 +937,10 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
 
-    return HermesCard(
+    return NgCard(
       onTap: onTap,
-      status: session.isActive ? HermesStatus.running : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -932,18 +951,18 @@ class _SessionCard extends StatelessWidget {
                   session.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.body.copyWith(
-                    color: tokens.onSurface,
+                  style: NgType.body.copyWith(
+                    color: c.text,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
               if (session.isActive) ...[
-                const SizedBox(width: HermesSpacing.sm),
-                const StatusChip(status: HermesStatus.running),
+                const SizedBox(width: 8),
+                const _StatusPill(label: 'Running', active: true),
               ],
               if (onMove != null) ...[
-                const SizedBox(width: HermesSpacing.xs),
+                const SizedBox(width: 4),
                 IconButton(
                   key: Key('move-session-${session.id}'),
                   tooltip: context.l10n.move_conversation,
@@ -954,12 +973,12 @@ class _SessionCard extends StatelessWidget {
             ],
           ),
           if (session.preview.isNotEmpty) ...[
-            const SizedBox(height: HermesSpacing.xs),
+            const SizedBox(height: 4),
             Text(
               session.preview,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: tokens.typography.label.copyWith(color: tokens.muted),
+              style: NgType.caption.copyWith(color: c.text3),
             ),
           ],
         ],
@@ -975,46 +994,44 @@ class _RepoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final lanes = repo.lanes;
 
-    return HermesCard(
+    return NgCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.folder_outlined, size: 18, color: tokens.muted),
-              const SizedBox(width: HermesSpacing.sm),
+              Icon(Icons.folder_outlined, size: 18, color: c.text3),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   repo.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.body.copyWith(
-                    color: tokens.onSurface,
-                  ),
+                  style: NgType.body.copyWith(color: c.text),
                 ),
               ),
               Text(
                 '${repo.sessionCount}',
-                style: tokens.typography.label.copyWith(color: tokens.muted),
+                style: NgType.caption.copyWith(color: c.text3),
               ),
             ],
           ),
           if (lanes.isNotEmpty) ...[
-            const SizedBox(height: HermesSpacing.sm),
+            const SizedBox(height: 8),
             Wrap(
-              spacing: HermesSpacing.sm,
-              runSpacing: HermesSpacing.xs,
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 for (final lane in lanes)
                   Text(
                     lane.isMain
                         ? context.l10n.branch_main(lane.label)
                         : lane.label,
-                    style: tokens.typography.label.copyWith(
-                      color: lane.isMain ? tokens.accent : tokens.muted,
+                    style: NgType.caption.copyWith(
+                      color: lane.isMain ? c.accentText : c.text3,
                     ),
                   ),
               ],

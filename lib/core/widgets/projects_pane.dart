@@ -17,8 +17,9 @@ import '../services/chat_space_store.dart';
 import '../services/project_folder_discovery.dart';
 import '../services/projects_repository.dart';
 import '../theme/hermes_theme.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 import 'adopt_project_folder_sheet.dart';
-import 'hermes_components.dart';
 import 'hermes_shell.dart';
 import 'space_migration_preview.dart';
 
@@ -317,14 +318,11 @@ class _ProjectsPaneState extends State<ProjectsPane>
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final view = _view;
 
     if (view == null) {
-      return const Padding(
-        padding: EdgeInsets.only(top: HermesSpacing.lg),
-        child: LoadingSkeleton(rows: 4),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (view.support == ProjectsSupport.unsupported) {
@@ -332,12 +330,16 @@ class _ProjectsPaneState extends State<ProjectsPane>
     }
 
     if (view.projects.isEmpty && view.error != null) {
-      return ErrorState(
+      return NgEmpty(
+        icon: Icons.error_outline,
         title: context.l10n.could_not_reach_hermes,
-        message: context
+        body: context
             .l10n
             .check_that_the_gateway_is_running_and_reachable_then_try,
-        onRetry: _refresh,
+        action: TextButton(
+          onPressed: _refresh,
+          child: Text(context.l10n.retry),
+        ),
       );
     }
 
@@ -346,21 +348,23 @@ class _ProjectsPaneState extends State<ProjectsPane>
       // #232 reporter was stuck in, with real folders already on the server,
       // so the adoption affordance must be reachable from here too.
       return Scaffold(
-        backgroundColor: tokens.surface,
+        backgroundColor: c.background,
         floatingActionButton: _actions(context),
         body: RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
             children: [
               SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
-              EmptyState(
+              NgEmpty(
                 icon: Icons.folder_outlined,
                 title: context.l10n.no_projects_yet,
-                message: context
+                body: context
                     .l10n
                     .projects_group_related_chats_files_and_activity_and_stay_in,
-                actionLabel: context.l10n.create_a_project,
-                onAction: _createProject,
+                action: NgPrimaryButton(
+                  label: context.l10n.create_a_project,
+                  onPressed: _createProject,
+                ),
               ),
             ],
           ),
@@ -369,7 +373,7 @@ class _ProjectsPaneState extends State<ProjectsPane>
     }
 
     return Scaffold(
-      backgroundColor: tokens.surface,
+      backgroundColor: c.background,
       floatingActionButton: _actions(context),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -377,7 +381,7 @@ class _ProjectsPaneState extends State<ProjectsPane>
           padding: const EdgeInsets.only(bottom: 96),
           children: [
             if (view.isStale) _OfflineBanner(error: view.error),
-            SectionHeader(
+            _SectionHeader(
               title: context.l10n.projects,
               count: view.projects.length,
               actionLabel: _hasLocalSpaces
@@ -387,12 +391,7 @@ class _ProjectsPaneState extends State<ProjectsPane>
             ),
             for (final project in view.projects)
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  HermesSpacing.lg,
-                  0,
-                  HermesSpacing.lg,
-                  HermesSpacing.md,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: _ProjectCard(
                   project: project,
                   isActive: project.id == view.activeId,
@@ -403,18 +402,13 @@ class _ProjectsPaneState extends State<ProjectsPane>
                 ),
               ),
             if (view.archived.isNotEmpty) ...[
-              SectionHeader(
+              _SectionHeader(
                 title: context.l10n.archived,
                 count: view.archived.length,
               ),
               for (final project in view.archived)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    HermesSpacing.lg,
-                    0,
-                    HermesSpacing.lg,
-                    HermesSpacing.md,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: _ProjectCard(
                     project: project,
                     isActive: false,
@@ -425,6 +419,49 @@ class _ProjectsPaneState extends State<ProjectsPane>
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final int? count;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _SectionHeader({
+    required this.title,
+    this.count,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    final showAction = actionLabel != null && onAction != null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 8, 8),
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(title, style: NgType.heading.copyWith(color: c.text)),
+          ),
+          if (count != null) ...[
+            const SizedBox(width: 8),
+            Text('$count', style: NgType.caption.copyWith(color: c.text3)),
+          ],
+          const Spacer(),
+          if (showAction)
+            TextButton(
+              onPressed: onAction,
+              child: Text(
+                actionLabel!,
+                style: NgType.label.copyWith(color: c.accentText),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -449,7 +486,7 @@ class _CompatibilityMode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final state = spaces;
     final localSpaces = state?.spaces ?? const <ChatSpace>[];
 
@@ -461,30 +498,21 @@ class _CompatibilityMode extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRetry,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: HermesSpacing.xl),
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
-          SectionHeader(title: context.l10n.compatibility_mode),
+          _SectionHeader(title: context.l10n.compatibility_mode),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              HermesSpacing.lg,
-              0,
-              HermesSpacing.lg,
-              HermesSpacing.md,
-            ),
-            child: HermesCard(
-              status: HermesStatus.idle,
-              padding: const EdgeInsets.all(HermesSpacing.md),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: NgCard(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 18, color: tokens.muted),
-                  const SizedBox(width: HermesSpacing.sm),
+                  Icon(Icons.info_outline, size: 18, color: c.text3),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _explanation,
-                      style: tokens.typography.body.copyWith(
-                        color: tokens.muted,
-                      ),
+                      style: NgType.bodySmall.copyWith(color: c.text3),
                     ),
                   ),
                 ],
@@ -492,26 +520,21 @@ class _CompatibilityMode extends StatelessWidget {
             ),
           ),
           if (localSpaces.isEmpty)
-            EmptyState(
+            NgEmpty(
               icon: Icons.folder_outlined,
               title: context.l10n.no_spaces_on_this_device,
-              message: context
+              body: context
                   .l10n
                   .chats_from_this_gateway_are_not_grouped_yet_grouping_stays,
             )
           else ...[
-            SectionHeader(
+            _SectionHeader(
               title: context.l10n.on_this_device,
               count: localSpaces.length,
             ),
             for (final space in localSpaces)
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  HermesSpacing.lg,
-                  0,
-                  HermesSpacing.lg,
-                  HermesSpacing.md,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: _LocalSpaceCard(
                   space: space,
                   sessionCount: counts[space.id] ?? 0,
@@ -532,10 +555,10 @@ class _LocalSpaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final chats = context.l10n.chats_count(sessionCount);
 
-    return HermesCard(
+    return NgCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -543,16 +566,12 @@ class _LocalSpaceCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: tokens.muted.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(HermesRadius.sm),
+              color: c.surface2,
+              borderRadius: BorderRadius.circular(NgRadii.sm),
             ),
-            child: Icon(
-              Icons.phone_android_rounded,
-              size: 20,
-              color: tokens.muted,
-            ),
+            child: Icon(Icons.phone_android_rounded, size: 20, color: c.text3),
           ),
-          const SizedBox(width: HermesSpacing.md),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,14 +580,12 @@ class _LocalSpaceCard extends StatelessWidget {
                   space.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.section.copyWith(
-                    color: tokens.onSurface,
-                  ),
+                  style: NgType.title.copyWith(color: c.text),
                 ),
-                const SizedBox(height: HermesSpacing.xs),
+                const SizedBox(height: 4),
                 Text(
                   context.l10n.on_this_device_only(chats),
-                  style: tokens.typography.body.copyWith(color: tokens.muted),
+                  style: NgType.bodySmall.copyWith(color: c.text3),
                 ),
               ],
             ),
@@ -586,26 +603,19 @@ class _OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        HermesSpacing.lg,
-        HermesSpacing.lg,
-        HermesSpacing.lg,
-        0,
-      ),
-      child: HermesCard(
-        status: HermesStatus.idle,
-        padding: const EdgeInsets.all(HermesSpacing.md),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: NgCard(
         child: Row(
           children: [
-            Icon(Icons.cloud_off_outlined, size: 18, color: tokens.muted),
-            const SizedBox(width: HermesSpacing.sm),
+            Icon(Icons.cloud_off_outlined, size: 18, color: c.text3),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 context.l10n.offline_showing_the_last_known_projects,
-                style: tokens.typography.label.copyWith(color: tokens.muted),
+                style: NgType.caption.copyWith(color: c.text3),
               ),
             ),
           ],
@@ -636,10 +646,10 @@ class _ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     final path = project.workingDirectory;
 
-    return HermesCard(
+    return NgCard(
       onTap: onTap,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,16 +658,12 @@ class _ProjectCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: tokens.accentContainer,
-              borderRadius: BorderRadius.circular(HermesRadius.sm),
+              color: c.accentSoft,
+              borderRadius: BorderRadius.circular(NgRadii.sm),
             ),
-            child: Icon(
-              Icons.folder_rounded,
-              size: 20,
-              color: tokens.onAccentContainer,
-            ),
+            child: Icon(Icons.folder_rounded, size: 20, color: c.accentText),
           ),
-          const SizedBox(width: HermesSpacing.md),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,46 +672,39 @@ class _ProjectCard extends StatelessWidget {
                   project.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: tokens.typography.section.copyWith(
-                    color: tokens.onSurface,
-                  ),
+                  style: NgType.title.copyWith(color: c.text),
                 ),
                 if (overview != null) ...[
-                  const SizedBox(height: HermesSpacing.xs),
+                  const SizedBox(height: 4),
                   Text(
                     context.l10n.chats_count(overview!.sessionCount),
-                    style: tokens.typography.label.copyWith(
-                      color: tokens.muted,
-                    ),
+                    style: NgType.caption.copyWith(color: c.text3),
                   ),
                 ],
                 if (project.description != null) ...[
-                  const SizedBox(height: HermesSpacing.xs),
+                  const SizedBox(height: 4),
                   Text(
                     project.description!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: tokens.typography.body.copyWith(color: tokens.muted),
+                    style: NgType.bodySmall.copyWith(color: c.text3),
                   ),
                 ],
                 if (path != null) ...[
-                  const SizedBox(height: HermesSpacing.xs),
+                  const SizedBox(height: 4),
                   Text(
                     path,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: tokens.typography.mono.copyWith(color: tokens.muted),
+                    style: NgType.code.copyWith(color: c.text3),
                   ),
                 ],
               ],
             ),
           ),
           if (isActive) ...[
-            const SizedBox(width: HermesSpacing.sm),
-            StatusChip(
-              status: HermesStatus.running,
-              label: context.l10n.active,
-            ),
+            const SizedBox(width: 8),
+            NgPill(context.l10n.active, tone: NgTone.success),
           ],
           PopupMenuButton<String>(
             key: Key('project-actions-${project.id}'),

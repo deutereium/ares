@@ -8,6 +8,8 @@ import '../models/provider_oauth.dart';
 import '../l10n/l10n.dart';
 import '../services/connection_manager.dart';
 import '../services/desktop_gateway_client.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 
 enum _OAuthNotice {
   transportInitFailed,
@@ -409,13 +411,17 @@ class _ProviderOAuthScreenState extends State<ProviderOAuthScreen>
   };
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(context.l10n.provider_oauth_title)),
+  Widget build(BuildContext context) => NgPage(
+    title: context.l10n.provider_oauth_title,
     body: ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         Text(context.l10n.provider_oauth_intro),
-        Text(context.l10n.provider_oauth_defaults_notice),
+        const SizedBox(height: 4),
+        Text(
+          context.l10n.provider_oauth_defaults_notice,
+          style: NgType.caption.copyWith(color: NgColors.of(context).text3),
+        ),
         if (_loading) const LinearProgressIndicator(),
         if (_unavailable case final reason?) ...[
           Text(_notice(reason)),
@@ -446,55 +452,97 @@ class _ProviderOAuthScreenState extends State<ProviderOAuthScreen>
           ),
         if (_busy) const LinearProgressIndicator(),
         if (_session case final session?)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(context.l10n.provider_oauth_complete(_provider!.name)),
-                  Text(context.l10n.provider_oauth_code_instruction),
-                  Text(session.userCode),
-                  Text(session.verificationUrl.host),
-                  Text(context.l10n.provider_oauth_waiting),
-                  TextButton(
-                    onPressed: _openBrowser,
-                    child: Text(context.l10n.provider_oauth_open_browser),
+          NgCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.provider_oauth_complete(_provider!.name),
+                  style: NgType.heading.copyWith(
+                    color: NgColors.of(context).text,
                   ),
-                  TextButton(
-                    onPressed: () => unawaited(
-                      _finish(_OAuthNotice.cancelled, cancel: true),
+                ),
+                const SizedBox(height: 8),
+                Text(context.l10n.provider_oauth_code_instruction),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: NgColors.of(context).surface2,
+                    borderRadius: BorderRadius.circular(NgRadii.md),
+                  ),
+                  child: Text(
+                    session.userCode,
+                    textAlign: TextAlign.center,
+                    style: NgType.title.copyWith(
+                      color: NgColors.of(context).accentText,
+                      letterSpacing: 2,
                     ),
-                    child: Text(context.l10n.provider_oauth_cancel),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(session.verificationUrl.host),
+                Text(context.l10n.provider_oauth_waiting),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: _openBrowser,
+                      child: Text(context.l10n.provider_oauth_open_browser),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => unawaited(
+                        _finish(_OAuthNotice.cancelled, cancel: true),
+                      ),
+                      child: Text(context.l10n.provider_oauth_cancel),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         for (final provider in _providers)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: NgCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     provider.name,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: NgType.heading.copyWith(
+                      color: NgColors.of(context).text,
+                    ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     provider.loggedIn
                         ? context.l10n.provider_oauth_credentials_unverified
                         : provider.statusKnown
                         ? context.l10n.provider_oauth_signed_out
                         : context.l10n.provider_oauth_account_status_unknown,
+                    style: NgType.caption.copyWith(
+                      color: NgColors.of(context).text3,
+                    ),
                   ),
-                  if (provider.disabledReason case final reason?)
-                    Text(switch (reason) {
-                      OAuthProviderDisabledReason.hostCliRequired =>
-                        context.l10n.provider_oauth_cli_required,
-                    }),
-                  FilledButton(
+                  if (provider.disabledReason case final reason?) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      switch (reason) {
+                        OAuthProviderDisabledReason.hostCliRequired =>
+                          context.l10n.provider_oauth_cli_required,
+                      },
+                      style: NgType.caption.copyWith(
+                        color: NgColors.of(context).warning,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  NgPrimaryButton(
+                    label: provider.loggedIn
+                        ? context.l10n.provider_oauth_sign_in_again
+                        : context.l10n.provider_oauth_sign_in,
                     onPressed:
                         _unavailable != null ||
                             _busy ||
@@ -502,11 +550,6 @@ class _ProviderOAuthScreenState extends State<ProviderOAuthScreen>
                             provider.disabledReason != null
                         ? null
                         : () => _start(provider),
-                    child: Text(
-                      provider.loggedIn
-                          ? context.l10n.provider_oauth_sign_in_again
-                          : context.l10n.provider_oauth_sign_in,
-                    ),
                   ),
                 ],
               ),

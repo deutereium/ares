@@ -5,6 +5,8 @@ import '../l10n/l10n.dart';
 import '../models/memory_fact.dart';
 import '../services/connection_manager.dart';
 import '../services/memory_repository.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 
 /// Saved built-in memory facts for the connected Hermes profile, not settings.
 class MemoryScreen extends StatefulWidget {
@@ -105,44 +107,48 @@ class _MemoryScreenState extends State<MemoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = NgColors.of(context);
     return DefaultTabController(
       key: ValueKey(widget.connection),
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          toolbarHeight: MediaQuery.textScalerOf(context)
-              .scale(kToolbarHeight)
-              .clamp(kToolbarHeight, double.infinity)
-              .toDouble(),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.l10n.memory),
-              Text(
-                widget.connection.gatewayProfile ?? widget.connection.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+      child: NgPage(
+        title: context.l10n.memory,
+        actions: [
+          IconButton(
+            tooltip: context.l10n.refresh,
+            icon: const Icon(Icons.refresh),
+            onPressed: _loading ? null : _loadMemory,
+          ),
+        ],
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  widget.connection.gatewayProfile ?? widget.connection.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: NgType.caption.copyWith(color: c.text3),
+                ),
               ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              tooltip: context.l10n.refresh,
-              icon: const Icon(Icons.refresh),
-              onPressed: _loading ? null : _loadMemory,
             ),
+            TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelColor: c.text,
+              unselectedLabelColor: c.text3,
+              indicatorColor: c.accent,
+              dividerColor: c.stroke,
+              tabs: [
+                Tab(text: context.l10n.memory_about_you),
+                Tab(text: context.l10n.memory_agent_notes),
+              ],
+            ),
+            Expanded(child: _buildBody(context)),
           ],
-          bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              Tab(text: context.l10n.memory_about_you),
-              Tab(text: context.l10n.memory_agent_notes),
-            ],
-          ),
         ),
-        body: _buildBody(context),
       ),
     );
   }
@@ -152,28 +158,16 @@ class _MemoryScreenState extends State<MemoryScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_hasError) {
-      return ListView(
-        padding: const EdgeInsets.all(32),
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            context.l10n.failed_to_load_memory,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _unavailable
-                ? context.l10n.memory_unavailable
-                : context.l10n.memory_load_error,
-          ),
-          const SizedBox(height: 24),
-          FilledButton(onPressed: _loadMemory, child: Text(context.l10n.retry)),
-        ],
+      return NgEmpty(
+        icon: Icons.error_outline,
+        title: context.l10n.failed_to_load_memory,
+        body: _unavailable
+            ? context.l10n.memory_unavailable
+            : context.l10n.memory_load_error,
+        action: TextButton(
+          onPressed: _loadMemory,
+          child: Text(context.l10n.retry),
+        ),
       );
     }
     return TabBarView(
@@ -218,23 +212,13 @@ class _MemoryScreenState extends State<MemoryScreen> {
           if (index == facts.length + 1) {
             if (facts.isNotEmpty) return const SizedBox.shrink();
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Column(
-                children: [
-                  const Icon(Icons.psychology_outlined, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.l10n.no_memory_entries,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    context
-                        .l10n
-                        .memory_entries_are_cross_session_facts_the_agent_remembers_they,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: NgEmpty(
+                icon: Icons.psychology_outlined,
+                title: context.l10n.no_memory_entries,
+                body: context
+                    .l10n
+                    .memory_entries_are_cross_session_facts_the_agent_remembers_they,
               ),
             );
           }
@@ -293,19 +277,22 @@ class _MemoryFactCardState extends State<_MemoryFactCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    final c = NgColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: NgCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SelectableText(_fullContent ?? widget.fact.content),
+            SelectableText(
+              _fullContent ?? widget.fact.content,
+              style: NgType.body.copyWith(color: c.text),
+            ),
             if (widget.fact.mayBeTruncated && _fullContent == null) ...[
               const SizedBox(height: 8),
               Text(
                 context.l10n.preview_truncated,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: NgType.caption.copyWith(color: c.text3),
               ),
               if (!widget.fact.hasStableIdentity)
                 Text(context.l10n.memory_full_fact_requires_update)

@@ -18,7 +18,8 @@ import '../services/turn_notification_service.dart';
 import '../widgets/config_backup_card.dart';
 import '../widgets/mobile_push_settings.dart';
 import '../widgets/text_size_settings_card.dart';
-import '../theme/hermes_theme.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 import '../../main.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../services/app_update_service.dart';
@@ -42,64 +43,63 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(context.l10n.settings)),
-    body: _buildBody(),
-  );
+  Widget build(BuildContext context) =>
+      NgPage(title: context.l10n.settings, body: _buildBody());
 
   Widget _buildBody() {
     final app = context.findAncestorStateOfType<HermesAppState>()!;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        ListTile(
-          leading: const Icon(Icons.login),
-          title: Text(context.l10n.provider_oauth_title),
-          subtitle: Text(context.l10n.provider_oauth_settings_subtitle),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) =>
-                  ProviderOAuthScreen(connection: widget.connection),
+        NgCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: NgRow(
+            icon: Icons.login,
+            title: context.l10n.provider_oauth_title,
+            subtitle: context.l10n.provider_oauth_settings_subtitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ProviderOAuthScreen(connection: widget.connection),
+              ),
             ),
           ),
         ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: DropdownButtonFormField<String>(
-              key: ValueKey(
-                'app-language-${LocalePreference.read(app.widget.connManager.prefs)?.toLanguageTag() ?? 'system'}',
-              ),
-              initialValue:
-                  LocalePreference.read(
-                    app.widget.connManager.prefs,
-                  )?.toLanguageTag() ??
-                  'system',
-              isExpanded: true,
-              decoration: InputDecoration(
-                labelText: context.l10n.app_language,
-                prefixIcon: const Icon(Icons.language),
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: 'system',
-                  child: Text(context.l10n.app_language_system),
-                ),
-                for (final locale in preferredSupportedLocales())
-                  DropdownMenuItem(
-                    value: locale.toLanguageTag(),
-                    child: Text(LocalePreference.name(locale)),
-                  ),
-              ],
-              onChanged: (tag) async {
-                final locale = tag == 'system'
-                    ? null
-                    : preferredSupportedLocales().firstWhere(
-                        (l) => l.toLanguageTag() == tag,
-                      );
-                await app.setLocale(locale);
-              },
+        const SizedBox(height: 16),
+        NgCard(
+          child: DropdownButtonFormField<String>(
+            key: ValueKey(
+              'app-language-${LocalePreference.read(app.widget.connManager.prefs)?.toLanguageTag() ?? 'system'}',
             ),
+            initialValue:
+                LocalePreference.read(
+                  app.widget.connManager.prefs,
+                )?.toLanguageTag() ??
+                'system',
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: context.l10n.app_language,
+              prefixIcon: const Icon(Icons.language),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: 'system',
+                child: Text(context.l10n.app_language_system),
+              ),
+              for (final locale in preferredSupportedLocales())
+                DropdownMenuItem(
+                  value: locale.toLanguageTag(),
+                  child: Text(LocalePreference.name(locale)),
+                ),
+            ],
+            onChanged: (tag) async {
+              final locale = tag == 'system'
+                  ? null
+                  : preferredSupportedLocales().firstWhere(
+                      (l) => l.toLanguageTag() == tag,
+                    );
+              await app.setLocale(locale);
+            },
           ),
         ),
         const SizedBox(height: 16),
@@ -146,21 +146,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // ---- Section: Connection ----
         _buildSectionHeader(context.l10n.connection_section),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _infoRow(context.l10n.label, widget.connection.label),
-                const SizedBox(height: 4),
-                _infoRow(context.l10n.host, widget.connection.host),
-                const SizedBox(height: 4),
-                _infoRow(context.l10n.port, '${widget.connection.port}'),
-                const SizedBox(height: 4),
-                _infoRow(context.l10n.base_url, widget.connection.baseUrl),
-              ],
-            ),
+        NgCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _infoRow(context.l10n.label, widget.connection.label),
+              const SizedBox(height: 4),
+              _infoRow(context.l10n.host, widget.connection.host),
+              const SizedBox(height: 4),
+              _infoRow(context.l10n.port, '${widget.connection.port}'),
+              const SizedBox(height: 4),
+              _infoRow(context.l10n.base_url, widget.connection.baseUrl),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -218,33 +215,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return result;
   }
 
-  Widget _buildSectionHeader(String title) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: theme.colorScheme.primary,
-        ),
-      ),
-    );
-  }
+  Widget _buildSectionHeader(String title) => NgSectionLabel(title);
 
   Widget _infoRow(String label, String value) {
+    final c = NgColors.of(context);
     return Row(
       children: [
         SizedBox(
           width: 80,
           child: Text(
             label,
-            style: TextStyle(
+            style: NgType.caption.copyWith(
+              color: c.text3,
               fontWeight: FontWeight.w500,
-              color: HermesTokens.of(context).muted,
             ),
           ),
         ),
-        Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+        Expanded(
+          child: Text(
+            value,
+            overflow: TextOverflow.ellipsis,
+            style: NgType.body.copyWith(color: c.text),
+          ),
+        ),
       ],
     );
   }
@@ -333,71 +326,68 @@ class _AboutCardState extends State<_AboutCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.hermes_agent_for_android,
-              style: TextStyle(fontWeight: FontWeight.bold),
+    final c = NgColors.of(context);
+    return NgCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.hermes_agent_for_android,
+            style: NgType.heading.copyWith(color: c.text),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.version_label(_version.isNotEmpty ? _version : '…'),
+            style: NgType.caption.copyWith(color: c.text3),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context
+                .l10n
+                .browse_and_manage_your_hermes_agent_sessions_from_your_phone,
+            style: NgType.bodySmall.copyWith(color: c.text3),
+          ),
+          const Divider(height: 24),
+          NgRow(
+            key: const ValueKey('privacy-policy-link'),
+            icon: Icons.privacy_tip_outlined,
+            title: context.l10n.privacy_policy,
+            onTap: openAresPrivacyPolicy,
+          ),
+          NgRow(
+            icon: Icons.description_outlined,
+            title: MaterialLocalizations.of(context).licensesPageTitle,
+            onTap: () {
+              registerAppLicenses();
+              showLicensePage(
+                context: context,
+                applicationName: context.l10n.hermes_agent_for_android,
+                applicationVersion: _version,
+              );
+            },
+          ),
+          if (AppUpdateService.selfUpdatesEnabled) ...[
+            NgRow(
+              icon: Icons.system_update_alt,
+              title: context.l10n.check_for_updates,
+              subtitle: _updateStatus,
+              trailing: _checking
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+              onTap: _checking ? null : _checkForUpdates,
             ),
-            const SizedBox(height: 4),
-            Text(
-              context.l10n.version_label(_version.isNotEmpty ? _version : '…'),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context
-                  .l10n
-                  .browse_and_manage_your_hermes_agent_sessions_from_your_phone,
-              style: TextStyle(color: HermesTokens.of(context).muted),
-            ),
-            const Divider(height: 24),
-            ListTile(
-              key: const ValueKey('privacy-policy-link'),
+            SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(context.l10n.privacy_policy),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: openAresPrivacyPolicy,
+              title: Text(context.l10n.check_for_updates_on_launch),
+              value: _checkOnLaunch,
+              onChanged: _setCheckOnLaunch,
             ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(MaterialLocalizations.of(context).licensesPageTitle),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                registerAppLicenses();
-                showLicensePage(
-                  context: context,
-                  applicationName: context.l10n.hermes_agent_for_android,
-                  applicationVersion: _version,
-                );
-              },
-            ),
-            if (AppUpdateService.selfUpdatesEnabled) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(context.l10n.check_for_updates),
-                subtitle: _updateStatus == null ? null : Text(_updateStatus!),
-                trailing: _checking
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-                onTap: _checking ? null : _checkForUpdates,
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(context.l10n.check_for_updates_on_launch),
-                value: _checkOnLaunch,
-                onChanged: _setCheckOnLaunch,
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -410,7 +400,7 @@ class _HandsFreeToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: handsFreeEnabled,
-      builder: (context, enabled, _) => Card(
+      builder: (context, enabled, _) => NgCard(
         child: SwitchListTile(
           secondary: const Icon(Icons.record_voice_over_outlined),
           title: Text(context.l10n.hands_free_settings_title),
@@ -513,22 +503,14 @@ class _VoicePickerState extends State<_VoicePicker> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      );
+      return const NgCard(child: Center(child: CircularProgressIndicator()));
     }
 
     if (_voices.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            context.l10n.no_tts_voices_found_ninstall_google_text_to_speech_and,
-            style: TextStyle(color: HermesTokens.of(context).muted),
-          ),
+      return NgCard(
+        child: Text(
+          context.l10n.no_tts_voices_found_ninstall_google_text_to_speech_and,
+          style: NgType.caption.copyWith(color: NgColors.of(context).text3),
         ),
       );
     }
@@ -663,7 +645,7 @@ class _NotificationSettingsState extends State<_NotificationSettings>
   Widget build(BuildContext context) {
     return ValueListenableBuilder<NotificationPrefs>(
       valueListenable: notificationPrefs,
-      builder: (context, prefs, _) => Card(
+      builder: (context, prefs, _) => NgCard(
         child: Column(
           children: [
             SwitchListTile(

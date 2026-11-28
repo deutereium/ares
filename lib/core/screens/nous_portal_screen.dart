@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 
 import '../l10n/l10n.dart';
 import '../services/connection_manager.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 
 class NousPortalScreen extends StatefulWidget {
   final SavedConnection connection;
@@ -133,24 +135,22 @@ class _NousPortalScreenState extends State<NousPortalScreen> {
     String title,
     List<Widget> Function(Map<String, dynamic>) content,
   ) {
+    final c = NgColors.of(context);
     final data = _data[id];
-    return Card(
+    return NgCard(
       key: ValueKey('portal-$id'),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            if (_failed.contains(id))
-              Text(context.l10n.portal_unavailable)
-            else if (data == null)
-              const LinearProgressIndicator()
-            else
-              ...content(data),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: NgType.heading.copyWith(color: c.text)),
+          const SizedBox(height: 8),
+          if (_failed.contains(id))
+            Text(context.l10n.portal_unavailable)
+          else if (data == null)
+            const LinearProgressIndicator()
+          else
+            ...content(data),
+        ],
       ),
     );
   }
@@ -158,24 +158,22 @@ class _NousPortalScreenState extends State<NousPortalScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.nous_portal),
-        actions: [
-          IconButton(
-            tooltip: l10n.refresh,
-            onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+    return NgPage(
+      title: l10n.nous_portal,
+      actions: [
+        IconButton(
+          tooltip: l10n.refresh,
+          onPressed: _loading ? null : _load,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
       body: RefreshIndicator(
         onRefresh: () async {
           if (!_loading) await _load();
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             Text(l10n.portal_read_only),
             const SizedBox(height: 8),

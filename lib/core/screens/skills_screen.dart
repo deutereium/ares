@@ -1,7 +1,8 @@
 // Skills browser — list installed skills with enabled/disabled status.
 import 'package:flutter/material.dart';
 import '../services/connection_manager.dart';
-import '../theme/hermes_theme.dart';
+import '../../nextgen/theme/nextgen_theme.dart';
+import '../../nextgen/ui/widgets.dart';
 
 import 'package:hermes_android/core/l10n/l10n.dart';
 
@@ -55,94 +56,75 @@ class _SkillsScreenState extends State<SkillsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.skills_2(_skills.length)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _load,
-          ),
-        ],
-      ),
+    return NgPage(
+      title: context.l10n.skills_2(_skills.length),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: _loading ? null : _load,
+        ),
+      ],
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    final tokens = HermesTokens.of(context);
+    final c = NgColors.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: tokens.warning),
-              const SizedBox(height: 16),
-              Text(
-                context.l10n.failed_to_load_skills,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(onPressed: _load, child: Text(context.l10n.retry)),
-            ],
-          ),
-        ),
+      return NgEmpty(
+        icon: Icons.error_outline,
+        title: context.l10n.failed_to_load_skills,
+        body: _error,
+        action: TextButton(onPressed: _load, child: Text(context.l10n.retry)),
       );
     }
     if (_skills.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.extension_off, size: 48, color: tokens.muted),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.no_skills_found,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ],
-        ),
+      return NgEmpty(
+        icon: Icons.extension_off,
+        title: context.l10n.no_skills_found,
       );
     }
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
         itemCount: _skills.length,
         itemBuilder: (_, i) {
           final skill = _skills[i];
           final name = skill['name'] as String? ?? '';
           final enabled = skill['enabled'] as bool? ?? false;
           final description = skill['description'] as String? ?? '';
-          return Card(
-            margin: const EdgeInsets.only(bottom: 6),
-            child: ListTile(
-              dense: true,
-              title: Text(
-                name,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-              ),
-              subtitle: description.isNotEmpty
-                  ? Text(
-                      description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    )
-                  : null,
-              trailing: Icon(
-                enabled ? Icons.check_circle : Icons.block,
-                color: enabled ? tokens.success : tokens.warning,
-                size: 18,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: NgCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: NgType.code.copyWith(color: c.text)),
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: NgType.caption.copyWith(color: c.text3),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    enabled ? Icons.check_circle : Icons.block,
+                    color: enabled ? c.success : c.warning,
+                    size: 18,
+                  ),
+                ],
               ),
             ),
           );

@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 
 import '../services/connection_manager.dart';
 import '../widgets/projects_root_settings_card.dart';
+import '../../nextgen/ui/widgets.dart';
 
 import 'package:hermes_android/core/l10n/l10n.dart';
 
@@ -29,10 +30,10 @@ class ProjectsRootScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(context.l10n.projects_root_title)),
+  Widget build(BuildContext context) => NgPage(
+    title: context.l10n.projects_root_title,
     body: ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         ProjectsRootSettingsCard(
           connection: connection,

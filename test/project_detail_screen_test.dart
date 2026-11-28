@@ -28,9 +28,9 @@ import 'package:hermes_android/core/models/project_sessions_tree.dart';
 import 'package:hermes_android/core/models/session.dart';
 import 'package:hermes_android/core/services/projects_repository.dart';
 import 'package:hermes_android/core/theme/hermes_theme.dart';
-import 'package:hermes_android/core/widgets/hermes_components.dart';
 import 'package:hermes_android/core/widgets/project_detail_screen.dart';
 import 'package:hermes_android/l10n/app_localizations.dart';
+import 'package:hermes_android/nextgen/ui/widgets.dart';
 
 Session _session({
   String id = 's1',
@@ -151,8 +151,8 @@ void main() {
     await _pump(tester, load: ({required refresh}) => gate.future);
     await tester.pump();
 
-    expect(find.byType(LoadingSkeleton), findsOneWidget);
-    expect(find.byType(EmptyState), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(NgEmpty), findsNothing);
 
     gate.complete(
       ProjectSessionsView(
@@ -164,7 +164,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoadingSkeleton), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Ship the Files browser'), findsOneWidget);
   });
 
@@ -181,7 +181,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byType(NgEmpty), findsOneWidget);
     expect(find.textContaining('No chats'), findsOneWidget);
   });
 
@@ -208,7 +208,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(ErrorState), findsOneWidget);
+    expect(find.byType(NgEmpty), findsOneWidget);
 
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
@@ -251,7 +251,7 @@ void main() {
 
     // The chat the user was reading survives the failed refresh.
     expect(find.text('Ship the Files browser'), findsOneWidget);
-    expect(find.byType(ErrorState), findsNothing);
+    expect(find.byType(NgEmpty), findsNothing);
     expect(find.textContaining('Offline'), findsOneWidget);
   });
 
@@ -269,8 +269,8 @@ void main() {
 
     // Never the empty state: "no chats" would be a claim this gateway cannot
     // support, and a red error would blame the user for an old server.
-    expect(find.byType(EmptyState), findsNothing);
-    expect(find.byType(ErrorState), findsOneWidget);
+    expect(find.textContaining('No chats'), findsNothing);
+    expect(find.byType(NgEmpty), findsOneWidget);
     expect(find.textContaining('does not support'), findsOneWidget);
   });
 
@@ -633,7 +633,7 @@ void main() {
       expect(find.text('Ship the Files browser'), findsOneWidget);
       expect(find.text('Review the draft'), findsNothing);
       expect(find.text('Pushed the release tag'), findsNothing);
-      expect(find.byType(EmptyState), findsNothing);
+      expect(find.byType(NgEmpty), findsNothing);
     });
 
     testWidgets('clearing the search restores every chat', (tester) async {
@@ -667,7 +667,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(kProjectSearchFieldKey), findsNothing);
-      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.byType(NgEmpty), findsOneWidget);
       expect(find.textContaining('No chats'), findsOneWidget);
     });
 
@@ -680,7 +680,7 @@ void main() {
       await tester.enterText(searchField(), 'zzz-no-such-chat');
       await tester.pumpAndSettle();
 
-      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.byType(NgEmpty), findsOneWidget);
       expect(find.text('No matches'), findsOneWidget);
       // Never the "empty project" claim: the chat may exist elsewhere.
       expect(find.textContaining('No chats yet'), findsNothing);
