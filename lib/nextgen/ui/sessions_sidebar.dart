@@ -163,8 +163,9 @@ class NgSessionsModel extends ChangeNotifier {
       s.profile ??
       (aggregatesProfiles ? null : scope.connection.gatewayProfile);
 
-  /// The small label shown under a chat title: the owning profile's name.
-  String profileLabelOf(Session s) => ngProfileLabel(
+  /// The small label shown under a chat title: the owning profile's alias.
+  String profileLabelOf(Session s) => ngProfileDisplayName(
+    scope,
     profileOf(s) ??
         (aggregatesProfiles ? null : scope.connection.gatewayProfile),
   );
@@ -864,7 +865,19 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
   /// Picks a profile (when the gateway has more than one) and starts a chat
   /// there. The old top-of-sidebar profile switch lives here now.
   Future<void> _startChat() async {
-    final choice = await showNgNewChatProfilePicker(context);
+    // The picker marks the open chat's profile as current, not always the
+    // server default.
+    Session? open;
+    for (final s in widget.model.sessions) {
+      if (s.id == widget.currentSessionId) {
+        open = s;
+        break;
+      }
+    }
+    final choice = await showNgNewChatProfilePicker(
+      context,
+      currentProfile: open == null ? null : widget.model.profileOf(open),
+    );
     if (!mounted || choice == null) return;
     widget.onNewChat(choice.profile);
   }
@@ -1171,10 +1184,7 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                           key: const Key('ng-destinations-button-sidebar'),
                           tooltip: ngL.ng_destinations,
                           visualDensity: VisualDensity.compact,
-                          icon: const Icon(
-                            Icons.space_dashboard_outlined,
-                            size: 20,
-                          ),
+                          icon: const Icon(Icons.more_horiz, size: 20),
                           onPressed: widget.onOpenDestinations,
                         ),
                       ],
@@ -1326,7 +1336,8 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
                         right: 0,
                         bottom: 12,
                         child: Align(
-                          alignment: const Alignment(0.28, 1),
+                          // Centred like Android's bottom navigation pill.
+                          alignment: Alignment.bottomCenter,
                           child: Transform.scale(
                             scale: 0.8,
                             child: _newChatPill(c),
@@ -1800,40 +1811,47 @@ class NgDestinationsSidebar extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 4, 4, 16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: c.accentSoft,
-                      borderRadius: BorderRadius.circular(NgRadii.md),
-                    ),
-                    child: Icon(
-                      Icons.grid_view_rounded,
-                      size: 21,
-                      color: c.accentText,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ngL.ng_destinations,
-                          style: NgType.heading.copyWith(color: c.text),
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: c.accentSoft,
+                          borderRadius: BorderRadius.circular(NgRadii.md),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          scope.gateway.url.display,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: NgType.caption.copyWith(color: c.text3),
+                        child: Icon(
+                          Icons.hub_outlined,
+                          size: 21,
+                          color: c.accentText,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hermes Gateway',
+                              style: NgType.heading.copyWith(color: c.text),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              scope.gateway.url.display,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: NgType.caption.copyWith(color: c.text3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 12),
+                  const _GatewaySelector(),
                 ],
               ),
             ),
@@ -1902,6 +1920,153 @@ class NgDestinationsSidebar extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GatewaySelector extends StatelessWidget {
+  const _GatewaySelector();
+
+  Future<void> _choose(BuildContext context) async {
+    final scope = NgScope.of(context);
+    final current = scope.connection;
+    final chosen = await showNgSheet<String>(
+      context,
+      builder: (ctx) {
+        final c = NgColors.of(ctx);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Hermes Gateway',
+                    style: NgType.heading.copyWith(color: c.text),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final saved in scope.connections)
+                      ListTile(
+                        key: Key('ng-gateway-${saved.id}'),
+                        leading: Icon(
+                          Icons.dns_outlined,
+                          color: saved.id == current.id
+                              ? c.accent
+                              : c.text3,
+                        ),
+                        title: Text(
+                          saved.label,
+                          style: TextStyle(color: c.text),
+                        ),
+                        subtitle: Text(
+                          saved.gatewayProfile == null ||
+                                  saved.gatewayProfile!.trim().isEmpty
+                              ? saved.host
+                              : '${saved.host} · ${saved.gatewayProfile}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: NgType.caption.copyWith(color: c.text3),
+                        ),
+                        trailing: saved.id == current.id
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check, color: c.accent),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    ngL.ng_in_use,
+                                    style: NgType.caption.copyWith(
+                                      color: c.accentText,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : null,
+                        onTap: () => Navigator.of(ctx).pop(saved.id),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (chosen == null || !context.mounted || chosen == current.id) return;
+    try {
+      await scope.switchTo(chosen);
+    } catch (e) {
+      if (context.mounted) ngToast(context, '$e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = NgColors.of(context);
+    final scope = NgScope.of(context);
+    final current = scope.connection;
+    return Material(
+      color: c.surface,
+      borderRadius: BorderRadius.circular(NgRadii.md),
+      child: InkWell(
+        key: const Key('ng-gateway-selector'),
+        borderRadius: BorderRadius.circular(NgRadii.md),
+        onTap: () => _choose(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: c.well,
+                  borderRadius: BorderRadius.circular(NgRadii.sm),
+                ),
+                child: Icon(
+                  Icons.dns_outlined,
+                  size: 17,
+                  color: c.accentText,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      current.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: NgType.label.copyWith(
+                        color: c.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      scope.connections.length > 1
+                          ? '${scope.connections.length} saved gateways'
+                          : 'Saved gateway',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: NgType.caption.copyWith(color: c.text3),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.expand_more, size: 18, color: c.text3),
+            ],
+          ),
         ),
       ),
     );

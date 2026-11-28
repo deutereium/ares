@@ -181,6 +181,7 @@ String _statusLabel(String status) => switch (status) {
   'blocked' => ngL.ng_kanban_blocked,
   'review' => ngL.ng_kanban_review,
   'done' => ngL.ng_kanban_done,
+  'archived' => ngL.ng_archived,
   _ => status,
 };
 
@@ -485,7 +486,7 @@ class _NgKanbanTaskPageState extends State<_NgKanbanTaskPage> {
     return NgPage(
       title: task.title.isEmpty ? task.id : task.title,
       actions: [
-        if (targets.isNotEmpty)
+        if (targets.isNotEmpty || task.status != 'archived')
           PopupMenuButton<String>(
             key: const Key('ng-kanban-move'),
             enabled: !_busy,
@@ -497,6 +498,26 @@ class _NgKanbanTaskPageState extends State<_NgKanbanTaskPage> {
                   value: status,
                   child: Text(_statusLabel(status)),
                 ),
+              if (task.status != 'archived') ...[
+                if (targets.isNotEmpty) const PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'archived',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.archive_outlined,
+                        size: 18,
+                        color: c.danger,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        ngL.ng_archived,
+                        style: TextStyle(color: c.danger),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
       ],

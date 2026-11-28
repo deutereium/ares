@@ -200,10 +200,20 @@ class DashboardSessionWrites {
 /// One row of the gateway's authenticated `GET /api/profiles`: the profile
 /// name and the description the server (or the user) gave it.
 class ProfileSummary {
-  const ProfileSummary({required this.name, this.description = ''});
+  const ProfileSummary({
+    required this.name,
+    this.description = '',
+    this.displayName = '',
+  });
 
   final String name;
   final String description;
+
+  /// The profile's friendly alias, when the gateway has one configured.
+  final String displayName;
+
+  /// The name to show in the UI: the alias when set, otherwise the raw name.
+  String get alias => displayName.trim().isEmpty ? name : displayName.trim();
 }
 
 /// The classic [ApiClient] backed by the dashboard. Built by
@@ -284,6 +294,7 @@ class DashboardApiClient extends ApiClient {
           ProfileSummary(
             name: p['name'] as String,
             description: p['description']?.toString().trim() ?? '',
+            displayName: p['display_name']?.toString().trim() ?? '',
           ),
     ];
   }

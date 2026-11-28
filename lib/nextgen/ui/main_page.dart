@@ -662,7 +662,10 @@ class _NgMainPageState extends State<_NgMainContent>
   void _newChat() => unawaited(_pickNewChatProfile());
 
   Future<void> _pickNewChatProfile() async {
-    final choice = await showNgNewChatProfilePicker(context);
+    final choice = await showNgNewChatProfilePicker(
+      context,
+      currentProfile: _chat?.sessionProfile,
+    );
     if (!mounted || choice == null) return;
     _newChatOn(choice.profile);
   }

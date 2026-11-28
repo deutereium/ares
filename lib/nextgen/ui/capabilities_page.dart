@@ -5,9 +5,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../core/services/dashboard_api_client.dart';
-import '../data/nextgen_gateway.dart';
 import '../theme/nextgen_theme.dart';
 import 'nextgen_scope.dart';
+import 'profile_switcher.dart';
 import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
@@ -33,6 +33,8 @@ class _NgCapabilitiesPageState extends State<NgCapabilitiesPage> {
   final Map<_Kind, List<_Item>> _items = {};
   final Map<_Kind, String> _errors = {};
   String _query = '';
+  String? _profile;
+  bool _profileReady = false;
 
   @override
   void initState() {
@@ -40,8 +42,28 @@ class _NgCapabilitiesPageState extends State<NgCapabilitiesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load(_kind));
   }
 
-  Map<String, String>? _profileQuery(NextGenGateway g) =>
-      g.profile == null ? null : {'profile': g.profile!};
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_profileReady) {
+      _profileReady = true;
+      _profile = NgScope.of(context).gateway.profile;
+    }
+  }
+
+  Map<String, String>? _profileQuery() =>
+      _profile == null ? null : {'profile': _profile!};
+
+  void _setProfile(String profile) {
+    final next = profile == 'default' ? null : profile;
+    if (next == _profile) return;
+    setState(() {
+      _profile = next;
+      _items.clear();
+      _errors.clear();
+    });
+    _load(_kind);
+  }
 
   Future<void> _load(_Kind kind) async {
     final g = NgScope.of(context).gateway;
@@ -54,7 +76,7 @@ class _NgCapabilitiesPageState extends State<NgCapabilitiesPage> {
       final res = await g.dashboard.apiRequest(
         'GET',
         endpoint,
-        queryParameters: _profileQuery(g),
+        queryParameters: _profileQuery(),
       );
       if (res.statusCode != 200) {
         throw DashboardRequestException(
@@ -112,7 +134,7 @@ class _NgCapabilitiesPageState extends State<NgCapabilitiesPage> {
         'PUT',
         endpoint,
         body: body,
-        queryParameters: _profileQuery(g),
+        queryParameters: _profileQuery(),
       );
       if (res.statusCode < 200 || res.statusCode >= 300) {
         throw DashboardRequestException(
@@ -148,6 +170,16 @@ class _NgCapabilitiesPageState extends State<NgCapabilitiesPage> {
       title: ngL.ng_capabilities,
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: NgProfileSelector(
+                value: _profile ?? 'default',
+                onChanged: _setProfile,
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: NgSegmented<_Kind>(

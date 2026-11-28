@@ -35,6 +35,7 @@ import '../theme/nextgen_theme.dart';
 import 'avatar.dart';
 import 'model_sheet.dart';
 import 'nextgen_scope.dart';
+import 'profile_switcher.dart';
 import 'project_greeting.dart';
 import 'session_dock.dart';
 import 'sessions_sidebar.dart';
@@ -552,7 +553,8 @@ class _NgChatViewState extends State<NgChatView> {
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
-    final gateway = NgScope.of(context).gateway;
+    final scope = NgScope.of(context);
+    final gateway = scope.gateway;
     return ListenableBuilder(
       listenable: gateway,
       builder: (context, _) {
@@ -568,7 +570,9 @@ class _NgChatViewState extends State<NgChatView> {
             chat.sessionProfile ??
             gateway.profile ??
             'default';
-        final headerTitle = isBot ? botName : profileName;
+        final headerTitle = isBot
+            ? botName
+            : ngProfileDisplayName(scope, profileName);
         final headerSubtitle = isBot
             ? (botDescription.isEmpty ? ngL.ng_ready : botDescription)
             : (chat.title.isEmpty ? ngL.ng_new_chat : chat.title);
@@ -597,7 +601,7 @@ class _NgChatViewState extends State<NgChatView> {
                     isLabelVisible: unread > 0,
                     smallSize: 8,
                     backgroundColor: dot,
-                    child: const Icon(Icons.view_sidebar_outlined),
+                    child: const Icon(Icons.menu),
                   ),
                   onPressed: widget.onOpenSidebar,
                 );
@@ -651,7 +655,7 @@ class _NgChatViewState extends State<NgChatView> {
                 IconButton(
                   key: const Key('ng-destinations-button-chat'),
                   tooltip: ngL.ng_destinations,
-                  icon: const Icon(Icons.space_dashboard_outlined),
+                  icon: const Icon(Icons.more_horiz),
                   onPressed: widget.onOpenDestinations,
                 ),
               IconButton(

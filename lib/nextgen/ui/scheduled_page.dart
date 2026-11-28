@@ -2,9 +2,10 @@
 // delete, and each job's past runs (opening a run opens its chat).
 import 'package:flutter/material.dart';
 
-import '../../core/models/session.dart';
+import '../../core/services/connection_manager.dart';
 import '../theme/nextgen_theme.dart';
 import 'nextgen_scope.dart';
+import 'profile_switcher.dart';
 import 'sessions_sidebar.dart';
 import 'widgets.dart';
 import '../nextgen_l10n.dart';
@@ -54,6 +55,9 @@ class NgScheduledPage extends StatefulWidget {
 class _NgScheduledPageState extends State<NgScheduledPage> {
   List<Map<String, dynamic>>? _jobs;
   String? _error;
+  String? _profile;
+  bool _profileReady = false;
+  DashboardClient? _profileClient;
 
   @override
   void initState() {
@@ -61,9 +65,49 @@ class _NgScheduledPageState extends State<NgScheduledPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_profileReady) {
+      _profileReady = true;
+      _profile = NgScope.of(context).gateway.profile;
+    }
+  }
+
+  @override
+  void dispose() {
+    _profileClient?.close();
+    super.dispose();
+  }
+
+  /// The dashboard client for the selected profile. The gateway's own client
+  /// is reused when the selection matches the connection's profile.
+  DashboardClient _dashboard() {
+    final scope = NgScope.of(context);
+    if (_profile == scope.gateway.profile) return scope.gateway.dashboard;
+    final conn = scope.connection;
+    final scoped = _profile == null
+        ? conn.copyWith(clearGatewayProfile: true)
+        : conn.copyWith(gatewayProfile: _profile);
+    return _profileClient ??= DashboardClient.fromConnection(scoped);
+  }
+
+  void _setProfile(String profile) {
+    final next = profile == 'default' ? null : profile;
+    if (next == _profile) return;
+    _profileClient?.close();
+    _profileClient = null;
+    setState(() {
+      _profile = next;
+      _jobs = null;
+      _error = null;
+    });
+    _load();
+  }
+
   Future<void> _load() async {
     try {
-      final jobs = await NgScope.of(context).gateway.dashboard.getCronJobs();
+      final jobs = await _dashboard().getCronJobs();
       if (mounted) {
         setState(() {
           _jobs = jobs;
@@ -78,7 +122,7 @@ class _NgScheduledPageState extends State<NgScheduledPage> {
   Future<void> _create() async {
     final created = await showNgSheet<bool>(
       context,
-      builder: (_) => _NewJobSheet(scope: NgScope.of(context)),
+      builder: (_) => _NewJobSheet(client: _dashboard()),
     );
     if (created == true) await _load();
   }
@@ -89,6 +133,17 @@ class _NgScheduledPageState extends State<NgScheduledPage> {
     final jobs = _jobs;
     return NgPage(
       title: ngL.ng_scheduled,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: Center(
+            child: NgProfileSelector(
+              value: _profile ?? 'default',
+              onChanged: _setProfile,
+            ),
+          ),
+        ),
+      ],
       floating: FloatingActionButton.extended(
         backgroundColor: c.accent,
         foregroundColor: c.onAccent,
@@ -137,6 +192,7 @@ class _NgScheduledPageState extends State<NgScheduledPage> {
                           builder: (_) => _JobPage(
                             job: job,
                             onOpenSession: widget.onOpenSession,
+                            client: _dashboard(),
                           ),
                         ),
                       );
@@ -209,9 +265,14 @@ String _jobName(Map<String, dynamic> job) {
 }
 
 class _JobPage extends StatefulWidget {
-  const _JobPage({required this.job, required this.onOpenSession});
+  const _JobPage({
+    required this.job,
+    required this.onOpenSession,
+    required this.client,
+  });
   final Map<String, dynamic> job;
   final ValueChanged<Session> onOpenSession;
+  final DashboardClient client;
 
   @override
   State<_JobPage> createState() => _JobPageState();
@@ -233,7 +294,7 @@ class _JobPageState extends State<_JobPage> {
   }
 
   Future<void> _load() async {
-    final d = NgScope.of(context).gateway.dashboard;
+    final d = widget.client;
     try {
       final results = await Future.wait([
         d.getCronJob(_id),
@@ -268,7 +329,7 @@ class _JobPageState extends State<_JobPage> {
   @override
   Widget build(BuildContext context) {
     final c = NgColors.of(context);
-    final d = NgScope.of(context).gateway.dashboard;
+    final d = widget.client;
     final runs = _runs;
     return NgPage(
       title: _jobName(_job),
@@ -398,8 +459,8 @@ class _JobPageState extends State<_JobPage> {
 }
 
 class _NewJobSheet extends StatefulWidget {
-  const _NewJobSheet({required this.scope});
-  final NgScope scope;
+  const _NewJobSheet({required this.client});
+  final DashboardClient client;
 
   @override
   State<_NewJobSheet> createState() => _NewJobSheetState();
@@ -430,7 +491,7 @@ class _NewJobSheetState extends State<_NewJobSheet> {
       _error = null;
     });
     try {
-      await widget.scope.gateway.dashboard.createJob(
+      await widget.client.createJob(
         prompt: _prompt.text.trim(),
         schedule: _schedule.text.trim(),
         name: _name.text.trim(),

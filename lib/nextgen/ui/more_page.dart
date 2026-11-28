@@ -7,25 +7,24 @@ import 'package:flutter/material.dart';
 
 import '../../core/l10n/l10n.dart';
 import '../../core/models/hermes_project.dart';
-import '../../core/models/session.dart';
 import '../../core/screens/cron_screen.dart';
 import '../../core/screens/memory_screen.dart';
-import '../../core/screens/nous_portal_screen.dart';
 import '../../core/screens/projects_root_screen.dart';
-import '../../core/screens/provider_oauth_screen.dart';
 import '../../core/screens/skills_screen.dart';
+import '../../core/services/connection_manager.dart';
 import '../../core/services/dashboard_api_client.dart';
 import '../nextgen_preferences.dart';
 import '../theme/nextgen_theme.dart';
 import 'models_page.dart';
 import 'nextgen_scope.dart';
+import 'profile_switcher.dart';
 import 'projects_page.dart';
 import 'scheduled_page.dart';
 import 'sessions_sidebar.dart';
 import 'widgets.dart';
 import '../nextgen_l10n.dart';
 
-class NgMorePage extends StatelessWidget {
+class NgMorePage extends StatefulWidget {
   const NgMorePage({
     super.key,
     required this.onOpenSession,
@@ -35,12 +34,79 @@ class NgMorePage extends StatelessWidget {
   final ValueChanged<HermesProject>? onNewProjectChat;
 
   @override
+  State<NgMorePage> createState() => _NgMorePageState();
+}
+
+class _NgMorePageState extends State<NgMorePage> {
+  final Map<String, String> _profiles = {};
+  final Map<String, DashboardClient> _clients = {};
+  String? _scopeKey;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scope = NgScope.of(context);
+    // A different gateway, or a different active profile on it, means the
+    // per-row selections start again from the connection's own profile.
+    final scopeKey = '${scope.connection.id}|${scope.gateway.profile ?? ''}';
+    if (_scopeKey != scopeKey) {
+      for (final client in _clients.values) {
+        client.close();
+      }
+      _clients.clear();
+      _profiles.clear();
+      _scopeKey = scopeKey;
+    }
+    final own = _ownProfile();
+    for (final key in const ['memory', 'skills', 'cron', 'config', 'models']) {
+      _profiles.putIfAbsent(key, () => own);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final client in _clients.values) {
+      client.close();
+    }
+    super.dispose();
+  }
+
+  String _ownProfile() => NgScope.of(context).gateway.profile ?? 'default';
+
+  String _profileOf(String key) => _profiles[key] ?? _ownProfile();
+
+  void _setProfile(String key, String profile) {
+    setState(() => _profiles[key] = profile);
+  }
+
+  /// A copy of the connection scoped to [profile]; `default` omits the
+  /// override so the gateway uses its server-default store.
+  SavedConnection _connectionFor(String profile) {
+    final conn = NgScope.of(context).connection;
+    if (profile == 'default') return conn.copyWith(clearGatewayProfile: true);
+    return conn.copyWith(gatewayProfile: profile);
+  }
+
+  DashboardClient _clientFor(String profile) {
+    final scope = NgScope.of(context);
+    if (profile == _ownProfile()) return scope.gateway.dashboard;
+    return _clients.putIfAbsent(
+      profile,
+      () => DashboardClient.fromConnection(_connectionFor(profile)),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scope = NgScope.of(context);
     final conn = scope.connection;
     void push(Widget page) => Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => page));
+    Widget selector(String key) => NgProfileSelector(
+      value: _profileOf(key),
+      onChanged: (profile) => _setProfile(key, profile),
+    );
     return NgPage(
       title: ngL.ng_more,
       body: ListView(
@@ -54,8 +120,9 @@ class NgMorePage extends StatelessWidget {
                 NgRow(
                   icon: Icons.archive_outlined,
                   title: ngL.ng_archived_chats,
-                  onTap: () =>
-                      push(NgArchivedPage(onOpenSession: onOpenSession)),
+                  onTap: () => push(
+                    NgArchivedPage(onOpenSession: widget.onOpenSession),
+                  ),
                 ),
                 NgRow(
                   icon: Icons.folder_outlined,
@@ -63,8 +130,8 @@ class NgMorePage extends StatelessWidget {
                   subtitle: ngL.ng_chats_grouped_by_project_and_workspace,
                   onTap: () => push(
                     NgProjectsPage(
-                      onOpenSession: onOpenSession,
-                      onNewProjectChat: onNewProjectChat,
+                      onOpenSession: widget.onOpenSession,
+                      onNewProjectChat: widget.onNewProjectChat,
                     ),
                   ),
                 ),
@@ -86,56 +153,51 @@ class NgMorePage extends StatelessWidget {
                   icon: Icons.memory,
                   title: ngL.ng_memory,
                   subtitle: ngL.ng_what_hermes_remembers_about_you,
-                  onTap: () => push(MemoryScreen(connection: conn)),
+                  trailing: selector('memory'),
+                  onTap: () => push(
+                    MemoryScreen(connection: _connectionFor(_profileOf('memory'))),
+                  ),
                 ),
                 NgRow(
                   icon: Icons.auto_fix_high_outlined,
                   title: ngL.ng_skills_library,
                   subtitle: ngL.ng_browse_and_read_installed_skills,
-                  onTap: () => push(SkillsScreen(connection: conn)),
+                  trailing: selector('skills'),
+                  onTap: () => push(
+                    SkillsScreen(connection: _connectionFor(_profileOf('skills'))),
+                  ),
                 ),
                 NgRow(
                   icon: Icons.event_repeat,
                   title: ngL.ng_cron_editor,
                   subtitle: ngL.ng_edit_schedules_prompts_and_delivery,
-                  onTap: () => push(CronScreen(connection: conn)),
+                  trailing: selector('cron'),
+                  onTap: () => push(
+                    CronScreen(connection: _connectionFor(_profileOf('cron'))),
+                  ),
                 ),
                 NgRow(
                   icon: Icons.code,
                   title: ngL.ng_config_file,
                   subtitle: ngL.ng_edit_config_yaml_on_the_gateway,
-                  onTap: () => push(const NgConfigPage()),
+                  trailing: selector('config'),
+                  onTap: () =>
+                      push(NgConfigPage(profile: _profileOf('config'))),
                 ),
-              ],
-            ),
-          ),
-          NgSectionLabel(ngL.ng_models_and_providers),
-          NgCard(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Column(
-              children: [
                 NgRow(
                   icon: Icons.tune,
                   title: ngL.ng_model_management,
                   subtitle: ngL.ng_default_fallback_and_auxiliary_models,
-                  onTap: () => push(
-                    NgModelsPage(
-                      connection: conn,
-                      client: scope.gateway.dashboard,
-                    ),
-                  ),
-                ),
-                NgRow(
-                  icon: Icons.key_outlined,
-                  title: ngL.ng_provider_sign_in,
-                  subtitle: ngL.ng_connect_provider_accounts_with_oauth,
-                  onTap: () => push(ProviderOAuthScreen(connection: conn)),
-                ),
-                NgRow(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: ngL.ng_nous_portal,
-                  subtitle: ngL.ng_subscription_credits_and_usage,
-                  onTap: () => push(NousPortalScreen(connection: conn)),
+                  trailing: selector('models'),
+                  onTap: () {
+                    final profile = _profileOf('models');
+                    push(
+                      NgModelsPage(
+                        connection: _connectionFor(profile),
+                        client: _clientFor(profile),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -247,7 +309,10 @@ class _NgArchivedPageState extends State<NgArchivedPage> {
 }
 
 class NgConfigPage extends StatefulWidget {
-  const NgConfigPage({super.key});
+  const NgConfigPage({super.key, this.profile});
+
+  /// The profile whose config is opened. Null uses the connection's own.
+  final String? profile;
 
   @override
   State<NgConfigPage> createState() => _NgConfigPageState();
@@ -274,7 +339,8 @@ class _NgConfigPageState extends State<NgConfigPage> {
   }
 
   Map<String, String>? _query() {
-    final p = NgScope.of(context).gateway.profile;
+    final raw = widget.profile ?? NgScope.of(context).gateway.profile;
+    final p = (raw == null || raw == 'default') ? null : raw;
     return p == null ? null : {'profile': p};
   }
 

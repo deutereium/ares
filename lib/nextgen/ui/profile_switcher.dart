@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../core/services/dashboard_api_client.dart';
 import '../../core/services/profile_switch_service.dart';
 import '../nextgen_preferences.dart';
 import '../nextgen_l10n.dart';
@@ -77,11 +78,15 @@ Future<List<String>> ngProfiles(NgScope scope) async {
       DateTime.now().difference(hit.fetchedAt) < _profileCacheTtl) {
     return hit.profiles;
   }
-  final profiles = await scope.gateway.api.listProfiles();
+  final rows = await scope.gateway.api.listProfileSummaries();
+  final profiles = <String>[for (final row in rows) row.name];
   // An empty answer is not a profile list: never cache it, or the sidebar
   // stays single-profile until the TTL expires.
   if (profiles.isNotEmpty) {
     _profileCache[key] = _CachedProfiles(profiles, DateTime.now());
+    // The same request carries each profile's alias, so keep it for the
+    // labels that cannot afford a round trip of their own.
+    _profileDescriptionCache[key] = _metaFromRows(rows);
     unawaited(
       scope.prefs.setString(_profilePrefsKey(scope), jsonEncode(profiles)),
     );
@@ -99,38 +104,77 @@ Future<void> warmNgProfiles(NgScope scope) async {
 const _profileDescriptionTtl = Duration(minutes: 5);
 
 class _CachedProfileDescriptions {
-  _CachedProfileDescriptions(this.descriptions, this.fetchedAt);
+  _CachedProfileDescriptions(
+    this.descriptions,
+    this.aliases,
+    this.fetchedAt,
+  );
   final Map<String, String> descriptions;
+  final Map<String, String> aliases;
   final DateTime fetchedAt;
 }
 
 final Map<String, _CachedProfileDescriptions> _profileDescriptionCache = {};
 
-/// Profile descriptions change even less often than the name list. Keep the
-/// last answer per gateway so a picker can show what each profile is for
-/// without blocking on a round trip.
-Future<Map<String, String>> ngProfileDescriptions(NgScope scope) async {
+_CachedProfileDescriptions _metaFromRows(List<ProfileSummary> rows) {
+  return _CachedProfileDescriptions(
+    {
+      for (final row in rows)
+        if (row.description.trim().isNotEmpty)
+          row.name: row.description.trim(),
+    },
+    {for (final row in rows) row.name: row.alias},
+    DateTime.now(),
+  );
+}
+
+Future<_CachedProfileDescriptions> _ngProfileMeta(NgScope scope) async {
   final key = _profileCacheKey(scope);
   final hit = _profileDescriptionCache[key];
   if (hit != null &&
       DateTime.now().difference(hit.fetchedAt) < _profileDescriptionTtl) {
-    return hit.descriptions;
+    return hit;
   }
   try {
     final rows = await scope.gateway.api.listProfileSummaries();
-    final descriptions = {
-      for (final row in rows)
-        if (row.description.trim().isNotEmpty)
-          row.name: row.description.trim(),
-    };
-    _profileDescriptionCache[key] = _CachedProfileDescriptions(
-      descriptions,
-      DateTime.now(),
-    );
-    return descriptions;
+    final meta = _metaFromRows(rows);
+    if (rows.isNotEmpty) _profileDescriptionCache[key] = meta;
+    return meta;
   } catch (_) {
-    return hit?.descriptions ?? const {};
+    return hit ??
+        _CachedProfileDescriptions(const {}, const {}, DateTime.now());
   }
+}
+
+/// Profile descriptions change even less often than the name list. Keep the
+/// last answer per gateway so a picker can show what each profile is for
+/// without blocking on a round trip.
+Future<Map<String, String>> ngProfileDescriptions(NgScope scope) async =>
+    (await _ngProfileMeta(scope)).descriptions;
+
+/// Each profile's alias, from the same cached listing. Used by labels that
+/// must render synchronously; an unknown profile falls back to its raw name.
+Future<Map<String, String>> ngProfileAliases(NgScope scope) async =>
+    (await _ngProfileMeta(scope)).aliases;
+
+/// The cached alias for [profile], or null when the listing is not loaded or
+/// the profile has no alias. A null [profile] means the `default` store.
+String? ngCachedProfileAlias(NgScope scope, String? profile) {
+  final aliases = _profileDescriptionCache[_profileCacheKey(scope)]?.aliases;
+  if (aliases == null) return null;
+  final name = (profile == null || profile.trim().isEmpty)
+      ? 'default'
+      : profile.trim();
+  final alias = aliases[name]?.trim();
+  return (alias == null || alias.isEmpty) ? null : alias;
+}
+
+/// The label for [profile]: its alias when known, otherwise the profile name
+/// (or "Server Default" for a connection with no profile).
+String ngProfileDisplayName(NgScope scope, String? profile) {
+  final alias = ngCachedProfileAlias(scope, profile);
+  if (alias != null) return alias;
+  return ngProfileLabel(profile);
 }
 
 class _ProfileChoice {
@@ -145,14 +189,23 @@ const _ownProfile = '\u0000own';
 /// Asks which profile a new chat should live on. Returns null when the user
 /// dismisses the sheet, or a record whose [profile] is null for the
 /// connection's own profile. Gateways with no other profile answer at once.
+///
+/// [currentProfile] is the profile of the chat that is open (null for the
+/// connection's own), so the "Current" marker follows the chat instead of
+/// always sitting on the server default.
 Future<({String? profile})?> showNgNewChatProfilePicker(
-  BuildContext context,
-) async {
+  BuildContext context, {
+  String? currentProfile,
+}) async {
   final scope = NgScope.of(context);
   final current = scope.connection.gatewayProfile?.trim();
   // The connection now runs on the system-default profile, which the gateway
   // stores as `default`; it is the "own" choice, not another profile.
   final ownName = (current == null || current.isEmpty) ? 'default' : current;
+  final selectedName = (currentProfile == null || currentProfile.trim().isEmpty)
+      ? ownName
+      : currentProfile.trim();
+  final selectedIsOwn = selectedName == ownName;
   var names = cachedNgProfiles(scope);
   if (names == null || names.isEmpty) {
     // The warm-up can lose a race with the first New Chat; ask once here too.
@@ -168,7 +221,7 @@ Future<({String? profile})?> showNgNewChatProfilePicker(
       .toList(growable: false);
   if (others.isEmpty) return (profile: null);
 
-  final descriptions = ngProfileDescriptions(scope);
+  final meta = _ngProfileMeta(scope);
   final chosen = await showNgSheet<String>(
     context,
     builder: (ctx) {
@@ -318,31 +371,42 @@ Future<({String? profile})?> showNgNewChatProfilePicker(
               ),
             ),
             Flexible(
-              child: FutureBuilder<Map<String, String>>(
-                future: descriptions,
+              child: FutureBuilder<_CachedProfileDescriptions>(
+                future: meta,
                 builder: (ctx, snapshot) {
-                  final found = snapshot.data ?? const <String, String>{};
-                  final ownDescription =
-                      found[current] ?? found[ownName] ?? '';
+                  final found = snapshot.data?.descriptions ??
+                      const <String, String>{};
+                  final aliases =
+                      snapshot.data?.aliases ?? const <String, String>{};
+                  final ownDescription = found[current] ?? found[ownName] ?? '';
+                  final ownAlias = aliases[ownName]?.trim() ?? '';
+                  final ownLabel = ownAlias.isEmpty
+                      ? ngProfileLabel(current)
+                      : ownAlias;
+                  String labelFor(String name) {
+                    final alias = aliases[name]?.trim() ?? '';
+                    return alias.isEmpty ? name : alias;
+                  }
+
                   return ListView(
                     shrinkWrap: true,
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     children: [
                       card(
                         key: 'ng-new-chat-profile-own',
-                        label: ngProfileLabel(current),
+                        label: ownLabel,
                         description: ownDescription,
                         icon: Icons.dns_outlined,
-                        selected: true,
+                        selected: selectedIsOwn,
                         onTap: () => Navigator.of(ctx).pop(_ownProfile),
                       ),
                       for (final name in others)
                         card(
                           key: 'ng-new-chat-profile-$name',
-                          label: name,
+                          label: labelFor(name),
                           description: found[name] ?? '',
                           icon: Icons.person_outline,
-                          selected: false,
+                          selected: !selectedIsOwn && name == selectedName,
                           onTap: () => Navigator.of(ctx).pop(name),
                         ),
                     ],
@@ -410,7 +474,7 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
                         color: c.accentText,
                       ),
                       title: Text(
-                        name ?? ngL.ng_server_default,
+                        ngProfileDisplayName(scope, name),
                         style: TextStyle(color: c.text),
                       ),
                       selected: name == current,
@@ -446,5 +510,154 @@ Future<bool> showNgProfileSwitcher(BuildContext context) async {
   } catch (e) {
     if (context.mounted) ngToast(context, '$e');
     return false;
+  }
+}
+
+/// A compact chip naming the profile a surface acts on, with a sheet to change
+/// it. [value] is a concrete profile name; `default` is the server default.
+class NgProfileSelector extends StatelessWidget {
+  const NgProfileSelector({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.tooltip,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+  final String? tooltip;
+
+  Future<void> _pick(BuildContext context) async {
+    final scope = NgScope.of(context);
+    List<String> names;
+    try {
+      names = await ngProfiles(scope);
+    } catch (_) {
+      names = cachedNgProfiles(scope) ?? const <String>[];
+    }
+    if (!context.mounted) return;
+    final options = <String>{
+      for (final name in names)
+        if (name.trim().isNotEmpty) name.trim(),
+      value,
+    }.toList(growable: false);
+    final meta = _profileDescriptionCache[_profileCacheKey(scope)];
+    final aliases = meta?.aliases ?? const <String, String>{};
+    final descriptions = meta?.descriptions ?? const <String, String>{};
+    String labelFor(String name) {
+      final alias = aliases[name]?.trim() ?? '';
+      if (alias.isNotEmpty) return alias;
+      return name == 'default' ? ngL.ng_server_default : name;
+    }
+
+    final chosen = await showNgSheet<String>(
+      context,
+      builder: (ctx) {
+        final c = NgColors.of(ctx);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    ngL.ng_profiles,
+                    style: NgType.heading.copyWith(color: c.text),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final name in options)
+                      ListTile(
+                        key: Key('ng-profile-select-$name'),
+                        leading: Icon(
+                          name == 'default'
+                              ? Icons.dns_outlined
+                              : Icons.person_outline,
+                          color: c.accentText,
+                        ),
+                        title: Text(
+                          labelFor(name),
+                          style: TextStyle(color: c.text),
+                        ),
+                        subtitle: (descriptions[name] ?? '').isEmpty
+                            ? null
+                            : Text(
+                                descriptions[name]!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: NgType.caption.copyWith(
+                                  color: c.text3,
+                                ),
+                              ),
+                        selected: name == value,
+                        trailing: name == value
+                            ? Icon(Icons.check, color: c.accent)
+                            : null,
+                        onTap: () => Navigator.of(ctx).pop(name),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (chosen != null && chosen != value) onChanged(chosen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = NgScope.of(context);
+    final c = NgColors.of(context);
+    return Tooltip(
+      message: tooltip ?? ngL.ng_profiles,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(NgRadii.full),
+        onTap: () => _pick(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: c.well,
+            borderRadius: BorderRadius.circular(NgRadii.full),
+            border: Border.all(color: c.stroke),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.person_outline, size: 14, color: c.text3),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  _label(scope),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: NgType.caption.copyWith(
+                    color: c.text2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.expand_more, size: 16, color: c.text3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _label(NgScope scope) {
+    final alias = ngCachedProfileAlias(scope, value);
+    if (alias != null) return alias;
+    return value == 'default' ? ngL.ng_server_default : value;
   }
 }
