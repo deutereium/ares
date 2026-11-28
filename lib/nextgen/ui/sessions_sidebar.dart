@@ -1361,12 +1361,21 @@ class _NgSessionsSidebarState extends State<NgSessionsSidebar> {
         ),
       ),
     );
-    if (expanded) {
-      return Expanded(
-        child: SizedBox(height: 48, child: field),
-      );
-    }
-    return SizedBox(width: 48, height: 48, child: field);
+    // Keep the same widget structure in both states so the field keeps its
+    // element (and text-input connection) when focus expands it. The flexible
+    // slot always fills the row, keeping the tab and destination buttons on
+    // the right while the collapsed field shows only its circle on the left.
+    return Flexible(
+      fit: FlexFit.tight,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: expanded ? double.infinity : 48,
+          height: 48,
+          child: field,
+        ),
+      ),
+    );
   }
 
   Widget _tabToggle(NgColors c) {
