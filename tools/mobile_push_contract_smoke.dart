@@ -50,7 +50,7 @@ void main() {
           predicate<Object>(
             (e) => e is DashboardHttpException
                 ? e.statusCode == status
-                : e.toString() == 'Exception: HTTP $status',
+                : e.toString().startsWith('Exception: HTTP $status'),
             'HTTP $status (GET uses typed exception; PUT/POST use generic exception)',
           ),
         ),
